@@ -1,0 +1,325 @@
+-- =====================================================================
+-- IIM Calcutta MBAEx Placement Portal -- schema v1
+-- Paste the whole file into the Supabase SQL Editor and hit Run.
+-- Safe to re-run: everything is guarded.
+-- =====================================================================
+
+create extension if not exists pgcrypto;
+
+-- ---------------------------------------------------------------------
+-- 1. Allowlist. Seed this BEFORE anyone signs in.
+--    Anyone whose email is not here cannot create an account.
+-- ---------------------------------------------------------------------
+create table if not exists allowed_students (
+  email                  text primary key,
+  name                   text not null,
+  roll_no                text,
+  total_experience_years numeric(4,1),
+  is_admin               boolean not null default false
+);
+
+-- ---------------------------------------------------------------------
+-- 2. Students. One row per logged-in user, created automatically.
+-- ---------------------------------------------------------------------
+create table if not exists students (
+  id                     uuid primary key references auth.users on delete cascade,
+  email                  text unique not null,
+  name                   text not null,
+  roll_no                text,
+  phone                  text,
+  linkedin               text,
+  college                text not null default 'IIM Calcutta',
+  degree                 text not null default 'MBAEx',
+  specialization         text not null default 'General Management',
+  total_experience_years numeric(4,1),
+  is_admin               boolean not null default false,
+  created_at             timestamptz not null default now()
+);
+
+-- ---------------------------------------------------------------------
+-- 3. CVs. Files live in the private 'cvs' storage bucket.
+-- ---------------------------------------------------------------------
+create table if not exists cvs (
+  id         uuid primary key default gen_random_uuid(),
+  student_id uuid not null references students on delete cascade,
+  label      text not null,
+  file_path  text not null,
+  created_at timestamptz not null default now()
+);
+create index if not exists cvs_student_idx on cvs (student_id);
+
+-- ---------------------------------------------------------------------
+-- 4. Companies.
+-- ---------------------------------------------------------------------
+create table if not exists companies (
+  id                  uuid primary key default gen_random_uuid(),
+  name                text not null,
+  sector              text,
+  about               text,
+  tags                text[] not null default '{}',
+  is_legacy_recruiter boolean not null default false,
+  logo_url            text,
+  created_at          timestamptz not null default now()
+);
+
+-- ---------------------------------------------------------------------
+-- 5. Jobs. is_open = false means draft, invisible to students.
+--    extra_fields is for v2 -- a company asking something beyond the
+--    standard template. Format:
+--    [{"key":"notice_period","label":"Notice period (days)","type":"number"}]
+-- ---------------------------------------------------------------------
+create table if not exists jobs (
+  id                   uuid primary key default gen_random_uuid(),
+  company_id           uuid not null references companies on delete cascade,
+  title                text not null,
+  description          text,
+  location             text,
+  jd_path              text,
+  min_experience_years numeric(4,1),
+  deadline             timestamptz,
+  is_open              boolean not null default false,
+  extra_fields         jsonb not null default '[]',
+  created_at           timestamptz not null default now()
+);
+create index if not exists jobs_company_idx on jobs (company_id);
+
+-- ---------------------------------------------------------------------
+-- 6. Applications. One per student per job.
+-- ---------------------------------------------------------------------
+create table if not exists applications (
+  id         uuid primary key default gen_random_uuid(),
+  job_id     uuid not null references jobs on delete cascade,
+  student_id uuid not null references students on delete cascade,
+  cv_id      uuid not null references cvs,
+  answers    jsonb not null default '{}',
+  applied_at timestamptz not null default now(),
+  unique (job_id, student_id)
+);
+create index if not exists applications_job_idx on applications (job_id);
+create index if not exists applications_student_idx on applications (student_id);
+
+
+-- =====================================================================
+-- HELPERS
+-- =====================================================================
+
+-- security definer so RLS policies can call it without recursing into
+-- the students table policies.
+create or replace function is_admin()
+returns boolean
+language sql security definer stable
+set search_path = public
+as $$
+  select coalesce((select is_admin from students where id = auth.uid()), false);
+$$;
+
+-- On signup: look the email up in the allowlist. Not there -> reject.
+create or replace function handle_new_user()
+returns trigger
+language plpgsql security definer
+set search_path = public
+as $$
+declare a allowed_students%rowtype;
+begin
+  select * into a from allowed_students where lower(email) = lower(new.email);
+  if not found then
+    raise exception 'Email % is not on the placement list. Contact a placement rep.', new.email;
+  end if;
+
+  insert into students (id, email, name, roll_no, total_experience_years, is_admin)
+  values (new.id, lower(new.email), a.name, a.roll_no, a.total_experience_years, a.is_admin)
+  on conflict (id) do nothing;
+
+  return new;
+end;
+$$;
+
+drop trigger if exists on_auth_user_created on auth.users;
+create trigger on_auth_user_created
+  after insert on auth.users
+  for each row execute function handle_new_user();
+
+-- Students may edit phone / linkedin only. Everything else -- especially
+-- is_admin and total_experience_years, which gates eligibility -- is
+-- silently reverted unless an admin is making the change.
+create or replace function guard_student_update()
+returns trigger
+language plpgsql security definer
+set search_path = public
+as $$
+begin
+  if not is_admin() then
+    new.is_admin               := old.is_admin;
+    new.email                  := old.email;
+    new.name                   := old.name;
+    new.roll_no                := old.roll_no;
+    new.total_experience_years := old.total_experience_years;
+    new.college                := old.college;
+    new.degree                 := old.degree;
+    new.specialization         := old.specialization;
+  end if;
+  return new;
+end;
+$$;
+
+drop trigger if exists students_guard on students;
+create trigger students_guard
+  before update on students
+  for each row execute function guard_student_update();
+
+-- Refuse applications past the deadline, on a closed job, or below the
+-- experience bar. Enforced in the DB so a stale browser tab cannot bypass it.
+create or replace function guard_application()
+returns trigger
+language plpgsql security definer
+set search_path = public
+as $$
+declare j jobs%rowtype; exp numeric;
+begin
+  select * into j from jobs where id = new.job_id;
+  if not found then raise exception 'Job not found.'; end if;
+
+  if not is_admin() then
+    if not j.is_open then
+      raise exception 'This job is not open for applications.';
+    end if;
+    if j.deadline is not null and now() > j.deadline then
+      raise exception 'The deadline for this job has passed.';
+    end if;
+    select total_experience_years into exp from students where id = new.student_id;
+    if j.min_experience_years is not null
+       and coalesce(exp, 0) < j.min_experience_years then
+      raise exception 'You do not meet the minimum experience requirement.';
+    end if;
+  end if;
+
+  return new;
+end;
+$$;
+
+drop trigger if exists applications_guard on applications;
+create trigger applications_guard
+  before insert on applications
+  for each row execute function guard_application();
+
+
+-- =====================================================================
+-- ROW LEVEL SECURITY
+-- =====================================================================
+
+alter table allowed_students enable row level security;
+alter table students         enable row level security;
+alter table cvs              enable row level security;
+alter table companies        enable row level security;
+alter table jobs             enable row level security;
+alter table applications     enable row level security;
+
+drop policy if exists allowlist_admin       on allowed_students;
+drop policy if exists students_select       on students;
+drop policy if exists students_update_own   on students;
+drop policy if exists students_admin        on students;
+drop policy if exists cvs_own               on cvs;
+drop policy if exists companies_read        on companies;
+drop policy if exists companies_admin       on companies;
+drop policy if exists jobs_read             on jobs;
+drop policy if exists jobs_admin            on jobs;
+drop policy if exists applications_select   on applications;
+drop policy if exists applications_insert   on applications;
+drop policy if exists applications_delete   on applications;
+drop policy if exists applications_admin    on applications;
+
+create policy allowlist_admin on allowed_students
+  for all using (is_admin()) with check (is_admin());
+
+create policy students_select on students
+  for select to authenticated using (id = auth.uid() or is_admin());
+create policy students_update_own on students
+  for update to authenticated using (id = auth.uid()) with check (id = auth.uid());
+create policy students_admin on students
+  for all to authenticated using (is_admin()) with check (is_admin());
+
+create policy cvs_own on cvs
+  for all to authenticated
+  using (student_id = auth.uid() or is_admin())
+  with check (student_id = auth.uid() or is_admin());
+
+create policy companies_read on companies
+  for select to authenticated using (true);
+create policy companies_admin on companies
+  for all to authenticated using (is_admin()) with check (is_admin());
+
+create policy jobs_read on jobs
+  for select to authenticated using (is_open or is_admin());
+create policy jobs_admin on jobs
+  for all to authenticated using (is_admin()) with check (is_admin());
+
+create policy applications_select on applications
+  for select to authenticated using (student_id = auth.uid() or is_admin());
+create policy applications_insert on applications
+  for insert to authenticated with check (student_id = auth.uid());
+create policy applications_delete on applications
+  for delete to authenticated using (student_id = auth.uid() or is_admin());
+create policy applications_admin on applications
+  for all to authenticated using (is_admin()) with check (is_admin());
+
+
+-- =====================================================================
+-- STORAGE
+-- =====================================================================
+
+insert into storage.buckets (id, name, public)
+values ('cvs', 'cvs', false), ('jds', 'jds', false)
+on conflict (id) do nothing;
+
+drop policy if exists cv_insert_own   on storage.objects;
+drop policy if exists cv_select_own   on storage.objects;
+drop policy if exists cv_delete_own   on storage.objects;
+drop policy if exists jd_select_auth  on storage.objects;
+drop policy if exists jd_admin_write  on storage.objects;
+
+-- CV paths must be  {student_uuid}/{filename}.pdf
+create policy cv_insert_own on storage.objects
+  for insert to authenticated
+  with check (bucket_id = 'cvs' and (storage.foldername(name))[1] = auth.uid()::text);
+
+create policy cv_select_own on storage.objects
+  for select to authenticated
+  using (bucket_id = 'cvs'
+         and ((storage.foldername(name))[1] = auth.uid()::text or is_admin()));
+
+create policy cv_delete_own on storage.objects
+  for delete to authenticated
+  using (bucket_id = 'cvs' and (storage.foldername(name))[1] = auth.uid()::text);
+
+create policy jd_select_auth on storage.objects
+  for select to authenticated using (bucket_id = 'jds');
+
+create policy jd_admin_write on storage.objects
+  for all to authenticated
+  using (bucket_id = 'jds' and is_admin())
+  with check (bucket_id = 'jds' and is_admin());
+
+
+-- =====================================================================
+-- EXPORT VIEW
+-- Columns match the company template exactly. Admin export reads this,
+-- filtered by job_id, and writes it straight to .xlsx.
+-- =====================================================================
+
+create or replace view application_export
+with (security_invoker = on) as
+select
+  a.job_id,
+  row_number() over (partition by a.job_id order by a.applied_at) as "S. No.",
+  s.name                                                          as "Name",
+  s.roll_no                                                       as "Roll No.",
+  s.college                                                       as "College Name",
+  s.degree                                                        as "Degree Name",
+  s.specialization                                                as "Specialization",
+  s.total_experience_years                                        as "Total Years of Experience",
+  c.file_path                                                     as cv_path,
+  c.label                                                         as cv_label,
+  a.applied_at
+from applications a
+join students s on s.id = a.student_id
+join cvs      c on c.id = a.cv_id;
