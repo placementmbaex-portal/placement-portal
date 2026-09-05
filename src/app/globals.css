@@ -1,26 +1,49 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* MBAEx Placement Portal design system — see DESIGN.md.
+     Dark mode is explicitly out of scope; ship light only. */
+  --navy: #014488;
+  --flame: #fb5813;
+  --brown: #592b0b;
+
+  --ink: #0b2545;
+  --closing: #b03604;
+
+  --slate: #5a6675;
+  --rule: #dee3e8;
+  --paper: #fafaf8;
+  --surface: #ffffff;
+
+  --live: #0f7b54;
+  --shut: #8b94a3;
+
+  --background: var(--paper);
+  --foreground: var(--ink);
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --color-navy: var(--navy);
+  --color-flame: var(--flame);
+  --color-brown: var(--brown);
+  --color-ink: var(--ink);
+  --color-closing: var(--closing);
+  --color-slate: var(--slate);
+  --color-rule: var(--rule);
+  --color-paper: var(--paper);
+  --color-surface: var(--surface);
+  --color-live: var(--live);
+  --color-shut: var(--shut);
+
+  --font-display: var(--font-source-serif);
+  --font-body: var(--font-plex-sans);
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-body), system-ui, sans-serif;
 }

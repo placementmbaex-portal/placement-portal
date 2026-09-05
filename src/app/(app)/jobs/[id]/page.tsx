@@ -1,7 +1,12 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { formatDateIST, formatCountdown, formatDateTimeIST } from "@/lib/format";
+import {
+  formatDateIST,
+  formatCountdown,
+  formatDateTimeIST,
+  getDeadlineUrgency,
+} from "@/lib/format";
 import { CompanyLogo } from "@/components/company-logo";
 import { ConfirmSubmitButton } from "@/components/confirm-submit-button";
 import { ApplyDialog } from "./apply-dialog";
@@ -86,35 +91,47 @@ export default async function JobPage({
     );
   if (cvList.length === 0) reasons.push("Upload a CV before applying.");
 
-  return (
-    <main className="mx-auto flex w-full max-w-2xl flex-1 flex-col gap-6 px-4 py-6">
-      <Link
-        href={`/companies/${job.company?.id}`}
-        className="text-sm text-zinc-500 hover:underline"
-      >
-        ← {job.company?.name}
-      </Link>
+  const urgency = getDeadlineUrgency(job.deadline);
+  const countdownColor = urgency === "urgent" ? "text-closing" : "text-slate";
 
-      <div className="flex items-start gap-4">
-        <CompanyLogo name={job.company?.name} logoUrl={job.company?.logo_url} />
-        <div className="min-w-0">
-          <h1 className="text-lg font-semibold text-zinc-900 dark:text-zinc-50">
-            {job.title}
-          </h1>
-          {job.location && (
-            <p className="text-sm text-zinc-500">{job.location}</p>
-          )}
+  return (
+    <main className="mx-auto flex w-full max-w-[760px] flex-1 flex-col gap-8 px-4 py-8">
+      <div>
+        <Link
+          href={`/companies/${job.company?.id}`}
+          className="text-[13.5px] leading-[1.45] text-slate hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
+        >
+          ← {job.company?.name}
+        </Link>
+
+        <div className="mt-4 flex items-start gap-4">
+          <CompanyLogo
+            name={job.company?.name}
+            logoUrl={job.company?.logo_url}
+          />
+          <div className="min-w-0">
+            <h1 className="font-display text-[30px] leading-[1.15] font-semibold text-ink">
+              {job.title}
+            </h1>
+            {job.location && (
+              <p className="mt-1 text-[13.5px] leading-[1.45] text-slate">
+                {job.location}
+              </p>
+            )}
+          </div>
         </div>
+
+        <p
+          className={`mt-4 text-[13.5px] leading-[1.4] font-medium tabular-nums ${countdownColor}`}
+        >
+          {job.deadline
+            ? `${formatCountdown(job.deadline)} · ${formatDateTimeIST(job.deadline)} IST`
+            : "No deadline"}
+        </p>
       </div>
 
-      <p className="text-sm text-zinc-600 dark:text-zinc-400">
-        {job.deadline
-          ? `Deadline: ${formatDateTimeIST(job.deadline)} · ${formatCountdown(job.deadline)}`
-          : "No deadline"}
-      </p>
-
       {job.description && (
-        <p className="whitespace-pre-wrap text-sm text-zinc-700 dark:text-zinc-300">
+        <p className="max-w-[68ch] whitespace-pre-wrap text-[15px] leading-[1.55] text-ink">
           {job.description}
         </p>
       )}
@@ -124,17 +141,17 @@ export default async function JobPage({
           <button
             type="submit"
             formTarget="_blank"
-            className="rounded-md border border-zinc-300 px-4 py-2 text-sm font-medium text-zinc-800 hover:bg-zinc-50 dark:border-zinc-700 dark:text-zinc-100 dark:hover:bg-zinc-900"
+            className="flex h-10 items-center rounded-md border border-navy px-4 text-[15px] font-medium text-navy hover:bg-surface focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
           >
             View JD
           </button>
         </form>
       )}
 
-      <div className="rounded-lg border border-zinc-200 p-4 dark:border-zinc-800">
+      <div>
         {application ? (
           <div className="space-y-3">
-            <p className="text-sm text-zinc-700 dark:text-zinc-300">
+            <p className="text-[15px] leading-[1.55] text-ink">
               You applied with{" "}
               <span className="font-medium">{application.cv?.label}</span> on{" "}
               {formatDateIST(application.applied_at)}.
@@ -144,7 +161,7 @@ export default async function JobPage({
                 <ConfirmSubmitButton
                   confirmMessage="Withdraw this application? This cannot be undone."
                   pendingLabel="Withdrawing…"
-                  className="rounded-md border border-red-300 px-4 py-2 text-sm font-medium text-red-600 hover:bg-red-50 disabled:opacity-60 dark:border-red-900 dark:text-red-400 dark:hover:bg-red-950"
+                  className="text-[15px] font-medium text-closing underline underline-offset-2 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink disabled:opacity-60"
                 >
                   Withdraw
                 </ConfirmSubmitButton>
@@ -153,10 +170,10 @@ export default async function JobPage({
           </div>
         ) : reasons.length > 0 ? (
           <div className="space-y-2">
-            <p className="text-sm font-medium text-zinc-500">
+            <p className="text-[15px] leading-[1.55] text-ink">
               You can&apos;t apply to this job yet:
             </p>
-            <ul className="list-inside list-disc text-sm text-zinc-500">
+            <ul className="list-inside list-disc space-y-1 text-[15px] leading-[1.55] text-slate">
               {reasons.map((reason) => (
                 <li key={reason}>{reason}</li>
               ))}

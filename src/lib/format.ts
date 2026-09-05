@@ -61,17 +61,37 @@ export function utcIsoToIstDatetimeLocal(iso: string): string {
   return `${d.getUTCFullYear()}-${pad(d.getUTCMonth() + 1)}-${pad(d.getUTCDate())}T${pad(d.getUTCHours())}:${pad(d.getUTCMinutes())}`;
 }
 
+// Sentence case: DESIGN.md's own example reads "Closes in 31 hours", as a
+// standalone leading phrase rather than a clause appended after other text.
 export function formatCountdown(deadlineIso: string) {
   const diffMs = new Date(deadlineIso).getTime() - Date.now();
-  if (diffMs <= 0) return "deadline passed";
+  if (diffMs <= 0) return "Deadline passed";
 
   const minutes = Math.floor(diffMs / 60_000);
   const hours = Math.floor(minutes / 60);
   const days = Math.floor(hours / 24);
 
-  if (days >= 1) return `closes in ${days} day${days === 1 ? "" : "s"}`;
-  if (hours >= 1) return `closes in ${hours} hour${hours === 1 ? "" : "s"}`;
+  if (days >= 1) return `Closes in ${days} day${days === 1 ? "" : "s"}`;
+  if (hours >= 1) return `Closes in ${hours} hour${hours === 1 ? "" : "s"}`;
   if (minutes >= 1)
-    return `closes in ${minutes} minute${minutes === 1 ? "" : "s"}`;
-  return "closes soon";
+    return `Closes in ${minutes} minute${minutes === 1 ? "" : "s"}`;
+  return "Closes soon";
+}
+
+export type DeadlineUrgency = "live" | "urgent" | "shut";
+
+// DESIGN.md's job-row state thresholds: >48h is live, <48h is urgent (the
+// rule turns --flame and the countdown text --closing), past or closed is
+// shut (the row drops to 60% opacity). A job with no deadline is treated as
+// live — there's no time signal to raise.
+export function getDeadlineUrgency(
+  deadlineIso: string | null,
+): DeadlineUrgency {
+  if (!deadlineIso) return "live";
+
+  const diffMs = new Date(deadlineIso).getTime() - Date.now();
+  if (diffMs <= 0) return "shut";
+
+  const hours = diffMs / 3_600_000;
+  return hours <= 48 ? "urgent" : "live";
 }

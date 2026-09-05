@@ -50,61 +50,58 @@ export default async function DashboardPage() {
   );
 
   return (
-    <main className="mx-auto flex w-full max-w-2xl flex-1 flex-col gap-8 px-4 py-6">
-      <section className="space-y-3">
-        <h1 className="text-lg font-semibold text-zinc-900 dark:text-zinc-50">
+    <main className="mx-auto flex w-full max-w-[760px] flex-1 flex-col gap-8 px-4 py-8">
+      <section>
+        <h1 className="font-display text-[21px] leading-[1.3] font-semibold text-ink">
           Open roles
         </h1>
         {jobList.length === 0 ? (
-          <p className="text-sm text-zinc-500">
-            No open roles right now. Check back soon.
+          <p className="mt-4 text-[15px] leading-[1.55] text-slate">
+            No open roles right now. New postings will appear here.
           </p>
         ) : (
-          <ul className="space-y-3">
+          <div className="mt-4 divide-y divide-rule">
             {jobList.map((job) => (
-              <li key={job.id}>
-                <JobCard
-                  job={job}
-                  companyName={job.company?.name}
-                  applied={appliedJobIds.has(job.id)}
-                />
-              </li>
+              <JobCard
+                key={job.id}
+                job={job}
+                companyName={job.company?.name}
+                applied={appliedJobIds.has(job.id)}
+              />
             ))}
-          </ul>
+          </div>
         )}
       </section>
 
-      <section className="space-y-3">
-        <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-50">
-          My applications
+      <section>
+        <h2 className="font-display text-[21px] leading-[1.3] font-semibold text-ink">
+          Your applications
         </h2>
         {applicationList.length === 0 ? (
-          <p className="text-sm text-zinc-500">
+          <p className="mt-4 text-[15px] leading-[1.55] text-slate">
             You haven&apos;t applied to anything yet.
           </p>
         ) : (
-          <ul className="space-y-2">
+          <div className="mt-4 divide-y divide-rule">
             {applicationList.map((application) => (
-              <li
+              <Link
                 key={application.id}
-                className="rounded-md border border-zinc-200 px-3 py-2 text-sm dark:border-zinc-800"
+                href={`/jobs/${application.job?.id}`}
+                className="block py-4 transition-colors hover:bg-surface focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
               >
-                <Link
-                  href={`/jobs/${application.job?.id}`}
-                  className="font-medium text-zinc-900 hover:underline dark:text-zinc-50"
-                >
+                <p className="font-display text-[17px] leading-[1.35] font-semibold text-ink">
                   {application.job?.title}
-                </Link>
-                <p className="text-xs text-zinc-500">
+                </p>
+                <p className="mt-0.5 text-[13.5px] leading-[1.45] text-slate">
                   {application.job?.company?.name}
                 </p>
-                <p className="mt-1 text-xs text-zinc-500">
+                <p className="mt-1 text-[13.5px] leading-[1.4] text-slate">
                   CV: {application.cv?.label} · Applied{" "}
                   {formatDateIST(application.applied_at)}
                 </p>
-              </li>
+              </Link>
             ))}
-          </ul>
+          </div>
         )}
       </section>
     </main>

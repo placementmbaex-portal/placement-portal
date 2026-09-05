@@ -11,7 +11,7 @@ export function CompanyLogo({
       <img
         src={logoUrl}
         alt=""
-        className="h-12 w-12 shrink-0 rounded-md border border-zinc-200 object-contain dark:border-zinc-800"
+        className="h-12 w-12 shrink-0 rounded-md border border-rule object-contain"
       />
     );
   }
@@ -19,7 +19,7 @@ export function CompanyLogo({
   const initials = (name ?? "?").trim().slice(0, 2).toUpperCase();
 
   return (
-    <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-md border border-zinc-200 bg-zinc-100 text-sm font-medium text-zinc-500 dark:border-zinc-800 dark:bg-zinc-900">
+    <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-md border border-rule bg-paper text-[13.5px] font-medium text-slate">
       {initials}
     </div>
   );

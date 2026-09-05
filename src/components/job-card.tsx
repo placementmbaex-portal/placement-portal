@@ -1,5 +1,10 @@
 import Link from "next/link";
-import { formatCountdown, formatDateTimeIST } from "@/lib/format";
+import {
+  formatCountdown,
+  formatDateTimeIST,
+  getDeadlineUrgency,
+  type DeadlineUrgency,
+} from "@/lib/format";
 
 type JobCardJob = {
   id: string;
@@ -8,6 +13,15 @@ type JobCardJob = {
   deadline: string | null;
 };
 
+const RULE_COLOR: Record<DeadlineUrgency, string> = {
+  live: "border-live",
+  urgent: "border-flame",
+  shut: "border-shut",
+};
+
+// The job row: DESIGN.md's one workhorse component. A 3px left rule carries
+// the only colour in the row, and it always means deadline state — never
+// anything else. The whole row is the click target.
 export function JobCard({
   job,
   companyName,
@@ -19,42 +33,45 @@ export function JobCard({
   applied: boolean;
   hideCompany?: boolean;
 }) {
+  const urgency = getDeadlineUrgency(job.deadline);
+
+  // Company name is normally the headline; when the company is already
+  // established by the surrounding page (the company's own job list), the
+  // job title takes that slot instead.
+  const primary = hideCompany ? job.title : companyName;
+  const secondary = (hideCompany ? [job.location] : [job.title, job.location])
+    .filter(Boolean)
+    .join(" · ");
+
   return (
     <Link
       href={`/jobs/${job.id}`}
-      className="block rounded-lg border border-zinc-200 p-4 transition-colors hover:border-zinc-300 dark:border-zinc-800 dark:hover:border-zinc-700"
+      className={`flex items-start gap-4 border-l-[3px] py-4 pr-1 pl-4 transition-colors hover:bg-surface focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink ${RULE_COLOR[urgency]} ${urgency === "shut" ? "opacity-60" : ""}`}
     >
-      <div className="flex items-start justify-between gap-2">
-        <div className="min-w-0">
-          {!hideCompany && companyName && (
-            <p className="truncate text-xs font-medium text-zinc-500">
-              {companyName}
-            </p>
-          )}
-          <h3 className="truncate text-sm font-semibold text-zinc-900 dark:text-zinc-50">
-            {job.title}
-          </h3>
-          {job.location && (
-            <p className="text-xs text-zinc-500">{job.location}</p>
-          )}
-        </div>
-        {applied && (
-          <span className="shrink-0 rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-medium text-emerald-700 dark:bg-emerald-900 dark:text-emerald-300">
-            Applied
-          </span>
+      <div className="min-w-0 flex-1">
+        <p className="truncate font-display text-[17px] leading-[1.35] font-semibold text-ink">
+          {primary}
+        </p>
+        {secondary && (
+          <p className="mt-0.5 truncate text-[13.5px] leading-[1.45] text-slate">
+            {secondary}
+          </p>
         )}
+        <p
+          className={`mt-1 text-[13.5px] leading-[1.4] font-medium tabular-nums ${
+            urgency === "urgent" ? "text-closing" : "text-slate"
+          }`}
+        >
+          {job.deadline
+            ? `${formatCountdown(job.deadline)} · ${formatDateTimeIST(job.deadline)} IST`
+            : "No deadline"}
+        </p>
       </div>
-      <div className="mt-3 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-zinc-500">
-        {job.deadline ? (
-          <>
-            <span>{formatDateTimeIST(job.deadline)}</span>
-            <span aria-hidden="true">·</span>
-            <span>{formatCountdown(job.deadline)}</span>
-          </>
-        ) : (
-          <span>No deadline</span>
-        )}
-      </div>
+      {applied && (
+        <span className="shrink-0 text-[13.5px] font-medium text-ink">
+          Applied ✓
+        </span>
+      )}
     </Link>
   );
 }
