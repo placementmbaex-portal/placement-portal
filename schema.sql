@@ -323,3 +323,232 @@ select
 from applications a
 join students s on s.id = a.student_id
 join cvs      c on c.id = a.cv_id;
+
+
+-- =====================================================================
+-- R2 5.1 -- ANNOUNCEMENTS & COMMENTS
+-- =====================================================================
+
+-- ---------------------------------------------------------------------
+-- 7. Announcements. Students may submit; only admins can post directly
+--    (status starts 'approved') or moderate a submission into that state.
+-- ---------------------------------------------------------------------
+create table if not exists announcements (
+  id                uuid primary key default gen_random_uuid(),
+  author_id         uuid not null references students on delete cascade,
+  title             text not null,
+  body              text not null,
+  status            text not null default 'pending'
+                      check (status in ('pending', 'approved', 'rejected')),
+  rejection_reason  text,
+  is_pinned         boolean not null default false,
+  attachment_path   text,
+  company_id        uuid references companies on delete set null,
+  job_id            uuid references jobs on delete set null,
+  comments_locked   boolean not null default false,
+  published_at      timestamptz,
+  created_at        timestamptz not null default now()
+);
+create index if not exists announcements_status_idx on announcements (status);
+create index if not exists announcements_feed_idx
+  on announcements (is_pinned desc, published_at desc);
+
+-- ---------------------------------------------------------------------
+-- 8. Comments. Threaded one level deep: a reply's parent must itself be
+--    a top-level comment on the same announcement.
+-- ---------------------------------------------------------------------
+create table if not exists comments (
+  id              uuid primary key default gen_random_uuid(),
+  announcement_id uuid not null references announcements on delete cascade,
+  author_id       uuid not null references students on delete cascade,
+  parent_id       uuid references comments on delete cascade,
+  body            text not null,
+  created_at      timestamptz not null default now()
+);
+create index if not exists comments_announcement_idx on comments (announcement_id);
+
+-- ---------------------------------------------------------------------
+-- Directory: exposes just id + name so any signed-in user can show
+-- "who wrote this" on an announcement or comment authored by someone
+-- else. No security_invoker here on purpose -- students_select only
+-- lets a student read their own row, and this view intentionally runs
+-- with the owner's privileges so that restriction doesn't apply to it.
+-- ---------------------------------------------------------------------
+create or replace view student_names as
+select id, name from students;
+
+grant select on student_names to authenticated;
+
+-- Force author_id to the caller and, for non-admins, force every
+-- moderation-only field back to submission defaults regardless of what
+-- was posted. Admins posting directly get published_at stamped on approval.
+create or replace function guard_announcement_insert()
+returns trigger
+language plpgsql security definer
+set search_path = public
+as $$
+begin
+  new.author_id := auth.uid();
+
+  if not is_admin() then
+    new.status           := 'pending';
+    new.rejection_reason := null;
+    new.is_pinned        := false;
+    new.comments_locked  := false;
+    new.published_at     := null;
+  elsif coalesce(new.status, 'pending') = 'approved' then
+    new.status       := 'approved';
+    new.published_at := coalesce(new.published_at, now());
+  else
+    new.status := coalesce(new.status, 'pending');
+  end if;
+
+  return new;
+end;
+$$;
+
+drop trigger if exists announcements_guard_insert on announcements;
+create trigger announcements_guard_insert
+  before insert on announcements
+  for each row execute function guard_announcement_insert();
+
+-- Only admins can reach an update at all (see announcements_admin below),
+-- but this still enforces the business rules: a rejection needs a reason,
+-- approving stamps published_at and clears any stale reason, only an
+-- approved announcement can be pinned, and at most 3 may be pinned at once.
+create or replace function guard_announcement_update()
+returns trigger
+language plpgsql security definer
+set search_path = public
+as $$
+declare pinned_count int;
+begin
+  if not is_admin() then
+    return old;
+  end if;
+
+  if new.status = 'approved' and old.status <> 'approved' then
+    new.published_at := coalesce(new.published_at, now());
+    new.rejection_reason := null;
+  end if;
+
+  if new.status = 'rejected' and new.rejection_reason is null then
+    raise exception 'A rejection needs a reason.';
+  end if;
+
+  if new.status <> 'approved' then
+    new.is_pinned := false;
+  end if;
+
+  if new.is_pinned and not old.is_pinned then
+    select count(*) into pinned_count
+    from announcements
+    where is_pinned and id <> new.id;
+
+    if pinned_count >= 3 then
+      raise exception 'You can pin at most 3 announcements. Unpin one first.';
+    end if;
+  end if;
+
+  return new;
+end;
+$$;
+
+drop trigger if exists announcements_guard_update on announcements;
+create trigger announcements_guard_update
+  before update on announcements
+  for each row execute function guard_announcement_update();
+
+-- Refuses a comment if the announcement isn't published, comments are
+-- locked, or the reply would be nested more than one level deep.
+create or replace function guard_comment_insert()
+returns trigger
+language plpgsql security definer
+set search_path = public
+as $$
+declare
+  a      announcements%rowtype;
+  parent comments%rowtype;
+begin
+  new.author_id := auth.uid();
+
+  select * into a from announcements where id = new.announcement_id;
+  if not found then
+    raise exception 'Announcement not found.';
+  end if;
+  if a.status <> 'approved' then
+    raise exception 'You can only comment on published announcements.';
+  end if;
+  if a.comments_locked then
+    raise exception 'Comments are locked on this announcement.';
+  end if;
+
+  if new.parent_id is not null then
+    select * into parent from comments where id = new.parent_id;
+    if not found or parent.announcement_id <> new.announcement_id then
+      raise exception 'Invalid parent comment.';
+    end if;
+    if parent.parent_id is not null then
+      raise exception 'Replies can only be one level deep.';
+    end if;
+  end if;
+
+  return new;
+end;
+$$;
+
+drop trigger if exists comments_guard_insert on comments;
+create trigger comments_guard_insert
+  before insert on comments
+  for each row execute function guard_comment_insert();
+
+alter table announcements enable row level security;
+alter table comments      enable row level security;
+
+drop policy if exists announcements_select on announcements;
+drop policy if exists announcements_insert on announcements;
+drop policy if exists announcements_admin  on announcements;
+drop policy if exists comments_select      on comments;
+drop policy if exists comments_insert      on comments;
+drop policy if exists comments_delete      on comments;
+drop policy if exists comments_admin       on comments;
+
+create policy announcements_select on announcements
+  for select to authenticated
+  using (status = 'approved' or author_id = auth.uid() or is_admin());
+create policy announcements_insert on announcements
+  for insert to authenticated with check (author_id = auth.uid());
+create policy announcements_admin on announcements
+  for all to authenticated using (is_admin()) with check (is_admin());
+
+create policy comments_select on comments
+  for select to authenticated
+  using (
+    exists (
+      select 1 from announcements a
+      where a.id = comments.announcement_id
+        and (a.status = 'approved' or a.author_id = auth.uid() or is_admin())
+    )
+  );
+create policy comments_insert on comments
+  for insert to authenticated with check (author_id = auth.uid());
+create policy comments_delete on comments
+  for delete to authenticated using (author_id = auth.uid());
+create policy comments_admin on comments
+  for all to authenticated using (is_admin()) with check (is_admin());
+
+insert into storage.buckets (id, name, public)
+values ('announcement-attachments', 'announcement-attachments', false)
+on conflict (id) do nothing;
+
+drop policy if exists announcement_attachment_insert_own  on storage.objects;
+drop policy if exists announcement_attachment_select_auth on storage.objects;
+
+-- Announcement attachment paths must be {author_uuid}/{filename}.pdf
+create policy announcement_attachment_insert_own on storage.objects
+  for insert to authenticated
+  with check (bucket_id = 'announcement-attachments'
+              and (storage.foldername(name))[1] = auth.uid()::text);
+
+create policy announcement_attachment_select_auth on storage.objects
+  for select to authenticated using (bucket_id = 'announcement-attachments');

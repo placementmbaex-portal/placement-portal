@@ -9,6 +9,7 @@ export default async function AdminHomePage() {
     { count: companyCount },
     { count: openJobCount },
     { count: applicationCount },
+    { count: pendingAnnouncementCount },
   ] = await Promise.all([
     supabase.from("students").select("id", { count: "exact", head: true }),
     supabase.from("companies").select("id", { count: "exact", head: true }),
@@ -19,6 +20,10 @@ export default async function AdminHomePage() {
     supabase
       .from("applications")
       .select("id", { count: "exact", head: true }),
+    supabase
+      .from("announcements")
+      .select("id", { count: "exact", head: true })
+      .eq("status", "pending"),
   ]);
 
   const stats = [
@@ -26,6 +31,7 @@ export default async function AdminHomePage() {
     { label: "Companies", value: companyCount ?? 0 },
     { label: "Open jobs", value: openJobCount ?? 0 },
     { label: "Total applications", value: applicationCount ?? 0 },
+    { label: "Pending announcements", value: pendingAnnouncementCount ?? 0 },
   ];
 
   return (
@@ -60,6 +66,12 @@ export default async function AdminHomePage() {
           className="rounded-lg border border-zinc-200 px-4 py-3 text-sm font-medium text-zinc-900 hover:bg-zinc-50 dark:border-zinc-800 dark:text-zinc-50 dark:hover:bg-zinc-900"
         >
           Jobs
+        </Link>
+        <Link
+          href="/admin/announcements"
+          className="rounded-lg border border-zinc-200 px-4 py-3 text-sm font-medium text-zinc-900 hover:bg-zinc-50 dark:border-zinc-800 dark:text-zinc-50 dark:hover:bg-zinc-900"
+        >
+          Announcements
         </Link>
       </nav>
     </main>

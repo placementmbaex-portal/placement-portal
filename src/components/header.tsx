@@ -16,31 +16,40 @@ export async function Header() {
     .eq("id", user.id)
     .single();
 
+  let pendingCount = 0;
+  if (student?.is_admin) {
+    const { count } = await supabase
+      .from("announcements")
+      .select("id", { count: "exact", head: true })
+      .eq("status", "pending");
+    pendingCount = count ?? 0;
+  }
+
   return (
-    <header className="flex items-center justify-between gap-4 border-b border-zinc-200 bg-white px-4 py-3 dark:border-zinc-800 dark:bg-black">
+    <header className="flex items-center justify-between gap-4 border-b border-rule bg-surface px-4 py-3">
       <Link
         href="/"
-        className="truncate text-sm font-semibold text-zinc-900 dark:text-zinc-50"
+        className="truncate font-display text-[17px] font-semibold text-ink"
       >
         IIM Calcutta MBAEx Placement Portal
       </Link>
-      <nav className="flex shrink-0 items-center gap-4 text-sm">
-        <span className="hidden text-zinc-600 sm:inline dark:text-zinc-400">
-          {student?.name}
-        </span>
-        <Link
-          href="/profile"
-          className="text-zinc-700 hover:underline dark:text-zinc-300"
-        >
+      <nav className="flex shrink-0 items-center gap-4 text-[13.5px]">
+        <span className="hidden text-slate sm:inline">{student?.name}</span>
+        <Link href="/profile" className="text-ink hover:underline">
           Profile
         </Link>
         {student?.is_admin && (
-          <Link
-            href="/admin"
-            className="text-zinc-700 hover:underline dark:text-zinc-300"
-          >
-            Admin
-          </Link>
+          <>
+            <Link href="/admin" className="text-ink hover:underline">
+              Admin
+            </Link>
+            <Link
+              href="/admin/announcements"
+              className="text-navy hover:underline"
+            >
+              Pending ({pendingCount})
+            </Link>
+          </>
         )}
         <SignOutButton />
       </nav>
