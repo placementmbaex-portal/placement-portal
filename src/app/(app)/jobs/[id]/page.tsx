@@ -65,7 +65,7 @@ export default async function JobPage({
         .single(),
       supabase
         .from("cvs")
-        .select("id, label")
+        .select("id, label, created_at")
         .eq("student_id", user.id)
         .order("created_at", { ascending: false }),
       supabase
@@ -78,12 +78,12 @@ export default async function JobPage({
     ]);
 
   const cvList = cvs ?? [];
+  const experience = student?.total_experience_years ?? 0;
   const deadlinePassed = job.deadline
     ? new Date(job.deadline) <= new Date()
     : false;
   const experienceShortfall =
-    job.min_experience_years != null &&
-    (student?.total_experience_years ?? 0) < job.min_experience_years;
+    job.min_experience_years != null && experience < job.min_experience_years;
 
   const reasons: string[] = [];
   if (!job.is_open) reasons.push("This job is closed.");
@@ -95,63 +95,107 @@ export default async function JobPage({
   if (cvList.length === 0) reasons.push("Upload a CV before applying.");
 
   const urgency = getDeadlineUrgency(job.deadline);
-  const countdownColor = urgency === "urgent" ? "text-closing" : "text-slate";
 
   return (
-    <main className="mx-auto flex w-full max-w-[760px] flex-1 flex-col gap-8 px-4 py-8">
-      <div>
+    <main className="flex flex-1 flex-col gap-5 pb-8">
+      <div className="border-b border-rule bg-surface px-5 pt-1.5 pb-4.5">
         <Link
           href={`/companies/${job.company?.id}`}
-          className="text-[13.5px] leading-[1.45] text-slate hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
+          className="inline-flex min-h-11 items-center gap-1.5 text-[13px] font-medium text-slate"
         >
-          ← {job.company?.name}
+          <svg
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2.2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <path d="M15 18l-6-6 6-6" />
+          </svg>
+          {job.company?.name}
         </Link>
 
-        <div className="mt-4 flex items-start gap-4">
+        <div className="flex items-start gap-3.5">
           <CompanyLogo
             name={job.company?.name}
             logoUrl={job.company?.logo_url}
           />
-          <div className="min-w-0">
-            <h1 className="font-display text-[30px] leading-[1.15] font-semibold text-ink">
+          <div className="min-w-0 flex-1">
+            <h1 className="font-display text-[24px] leading-[1.2] font-semibold text-ink">
               {job.title}
             </h1>
-            {job.location && (
-              <p className="mt-1 text-[13.5px] leading-[1.45] text-slate">
-                {job.location}
-              </p>
-            )}
+            <p className="mt-0.5 text-[13.5px] leading-[1.45] text-slate">
+              {[job.company?.name, job.location].filter(Boolean).join(" · ")}
+            </p>
           </div>
         </div>
 
-        <p
-          className={`mt-4 text-[13.5px] leading-[1.4] font-medium tabular-nums ${countdownColor}`}
-        >
-          {job.deadline
-            ? `${formatCountdown(job.deadline)} · ${formatDateTimeIST(job.deadline)} IST`
-            : "No deadline"}
-        </p>
+        {job.deadline && (
+          <div
+            className={`mt-3.5 inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 ${
+              urgency === "urgent" ? "bg-[#FDEAE0]" : "bg-paper"
+            }`}
+          >
+            {urgency === "urgent" && (
+              <span className="h-[7px] w-[7px] rounded-full bg-flame" />
+            )}
+            <span
+              className={`text-[12.5px] font-semibold tabular-nums ${
+                urgency === "urgent" ? "text-closing" : "text-slate"
+              }`}
+            >
+              {formatCountdown(job.deadline)} ·{" "}
+              {formatDateTimeIST(job.deadline)} IST
+            </span>
+          </div>
+        )}
       </div>
 
-      {job.description && (
-        <p className="max-w-[68ch] whitespace-pre-wrap text-[15px] leading-[1.55] text-ink">
-          {job.description}
-        </p>
+      {job.min_experience_years != null && (
+        <div className="flex gap-2.5 px-5">
+          <div className="flex-1 rounded-[10px] border border-rule bg-surface p-3">
+            <p className="text-[11px] text-slate">Min. experience</p>
+            <p className="mt-0.5 text-[15px] font-semibold tabular-nums text-ink">
+              {job.min_experience_years} yrs
+            </p>
+          </div>
+          <div className="flex-1 rounded-[10px] border border-rule bg-surface p-3">
+            <p className="text-[11px] text-slate">You have</p>
+            <p
+              className={`mt-0.5 text-[15px] font-semibold tabular-nums ${
+                experienceShortfall ? "text-closing" : "text-live"
+              }`}
+            >
+              {experience} yrs
+            </p>
+          </div>
+        </div>
       )}
 
-      {job.jd_path && (
-        <form action={viewJd.bind(null, job.id, job.jd_path)}>
-          <button
-            type="submit"
-            formTarget="_blank"
-            className="flex h-10 items-center rounded-md border border-navy px-4 text-[15px] font-medium text-navy hover:bg-surface focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
-          >
-            View JD
-          </button>
-        </form>
-      )}
+      <div className="px-5">
+        {job.description && (
+          <p className="max-w-[68ch] text-[14px] leading-[1.6] text-ink">
+            {job.description}
+          </p>
+        )}
 
-      <div>
+        {job.jd_path && (
+          <form action={viewJd.bind(null, job.id, job.jd_path)} className="mt-3.5">
+            <button
+              type="submit"
+              formTarget="_blank"
+              className="inline-flex h-10 items-center rounded-lg border border-navy px-4 font-body text-[14px] font-semibold text-navy"
+            >
+              View JD (PDF)
+            </button>
+          </form>
+        )}
+      </div>
+
+      <div className="px-5">
         {application ? (
           <div className="space-y-3">
             <p className="text-[15px] leading-[1.55] text-ink">
@@ -190,7 +234,14 @@ export default async function JobPage({
             </ul>
           </div>
         ) : (
-          <ApplyDialog jobId={job.id} cvs={cvList} />
+          <ApplyDialog
+            jobId={job.id}
+            cvs={cvList.map((cv) => ({
+              id: cv.id,
+              label: cv.label,
+              createdAt: cv.created_at,
+            }))}
+          />
         )}
       </div>
     </main>

@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { useActionState, useEffect, useRef, useState } from "react";
 import { formatDateTimeIST } from "@/lib/format";
+import { CATEGORY_CHIPS, PINNED_CHIP, type AnnouncementCategory } from "@/lib/chips";
+import { Chip } from "@/components/chip";
 import { ConfirmSubmitButton } from "@/components/confirm-submit-button";
 import {
   addComment,
@@ -24,6 +26,7 @@ export type AnnouncementData = {
   id: string;
   title: string;
   body: string;
+  category: AnnouncementCategory;
   isPinned: boolean;
   attachmentPath: string | null;
   publishedAt: string;
@@ -61,25 +64,26 @@ export function AnnouncementCard({
   return (
     <div
       id={`announcement-${announcement.id}`}
-      className={
+      className={`rounded-[14px] border border-rule bg-surface p-4 ${
         announcement.isPinned
-          ? "border-l-[3px] border-navy py-6 pl-4"
-          : "py-6"
-      }
+          ? "border-l-[3px] border-l-navy shadow-[0_1px_3px_rgba(22,32,46,0.08)]"
+          : ""
+      }`}
     >
-      <p className="font-display text-[21px] leading-[1.3] font-semibold text-ink">
+      <div className="flex flex-wrap gap-1.5">
+        {announcement.isPinned && <Chip style={PINNED_CHIP} />}
+        <Chip style={CATEGORY_CHIPS[announcement.category]} />
+      </div>
+
+      <p className="mt-2.5 font-display text-[17px] leading-[1.35] font-semibold text-ink">
         {announcement.title}
       </p>
-      <p className="mt-1 text-[13.5px] leading-[1.45] text-slate">
-        {announcement.authorName} ·{" "}
-        {formatDateTimeIST(announcement.publishedAt)} IST
-      </p>
-      <p className="mt-3 max-w-[68ch] whitespace-pre-wrap text-[15px] leading-[1.55] text-ink">
+      <p className="mt-1 max-w-[68ch] text-[13.5px] leading-[1.55] whitespace-pre-wrap text-ink">
         {announcement.body}
       </p>
 
       {(announcement.company || announcement.job) && (
-        <p className="mt-3 text-[13.5px] leading-[1.45]">
+        <p className="mt-2 text-[13.5px] leading-[1.45]">
           {announcement.company && (
             <Link
               href={`/companies/${announcement.company.id}`}
@@ -102,37 +106,42 @@ export function AnnouncementCard({
         </p>
       )}
 
-      {announcement.attachmentPath && (
-        <form
-          action={viewAnnouncementAttachment.bind(
-            null,
-            announcement.id,
-            announcement.attachmentPath,
-          )}
-          className="mt-3"
-        >
-          <button
-            type="submit"
-            formTarget="_blank"
-            className="text-[13.5px] text-navy hover:underline"
+      <div className="mt-3 flex items-center gap-3.5 text-[12.5px]">
+        {announcement.attachmentPath && (
+          <form
+            action={viewAnnouncementAttachment.bind(
+              null,
+              announcement.id,
+              announcement.attachmentPath,
+            )}
           >
-            View attachment
-          </button>
-        </form>
-      )}
+            <button
+              type="submit"
+              formTarget="_blank"
+              className="font-medium text-navy hover:underline"
+            >
+              View attachment
+            </button>
+          </form>
+        )}
+        <button
+          type="button"
+          onClick={() => setExpanded((v) => !v)}
+          className="text-slate hover:underline"
+        >
+          {comments.length === 0
+            ? "Add a comment"
+            : `${comments.length} comment${comments.length === 1 ? "" : "s"}`}
+        </button>
+      </div>
 
-      <button
-        type="button"
-        onClick={() => setExpanded((v) => !v)}
-        className="mt-4 text-[13.5px] text-slate hover:underline"
-      >
-        {comments.length === 0
-          ? "Add a comment"
-          : `${comments.length} comment${comments.length === 1 ? "" : "s"}`}
-      </button>
+      <p className="mt-2 text-[12px] text-shut">
+        {announcement.authorName} ·{" "}
+        {formatDateTimeIST(announcement.publishedAt)} IST
+      </p>
 
       {expanded && (
-        <div className="mt-3 space-y-4">
+        <div className="mt-3 space-y-4 border-t border-rule pt-3">
           {topLevel.map((comment) => (
             <div key={comment.id}>
               <CommentRow

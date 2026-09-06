@@ -105,3 +105,49 @@ export function formatMonthLabel(year: number, month0: number): string {
 }
 
 export const WEEKDAY_LABELS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+
+// The agenda's chip reuses the announcement category palette (there's no
+// separate colour vocabulary for calendar entries): ppt and deadline map
+// directly, everything else (test/interview/other) falls back to the
+// neutral "general" chip.
+export function eventTypeChipCategory(
+  type: EventType,
+): "ppt" | "deadline" | "general" {
+  if (type === "ppt" || type === "deadline") return type;
+  return "general";
+}
+
+const pad2 = (n: number) => String(n).padStart(2, "0");
+
+function dateKeyToUtcNoonMs(dateKey: string): number {
+  const [y, m, d] = dateKey.split("-").map(Number);
+  return Date.UTC(y, m - 1, d, 12);
+}
+
+function utcNoonMsToDateKey(ms: number): string {
+  const d = new Date(ms);
+  return `${d.getUTCFullYear()}-${pad2(d.getUTCMonth() + 1)}-${pad2(d.getUTCDate())}`;
+}
+
+export function addDaysToDateKey(dateKey: string, days: number): string {
+  return utcNoonMsToDateKey(dateKeyToUtcNoonMs(dateKey) + days * 86_400_000);
+}
+
+export type WeekDay = { dateKey: string; day: number; weekdayIndex: number };
+
+// Sunday-to-Saturday week containing anchorKey (a YYYY-MM-DD date, not an
+// instant — using UTC noon throughout sidesteps any timezone rounding).
+export function getWeekDates(anchorKey: string): WeekDay[] {
+  const anchorMs = dateKeyToUtcNoonMs(anchorKey);
+  const anchorWeekday = new Date(anchorMs).getUTCDay();
+  const sundayMs = anchorMs - anchorWeekday * 86_400_000;
+
+  return Array.from({ length: 7 }, (_, i) => {
+    const ms = sundayMs + i * 86_400_000;
+    return {
+      dateKey: utcNoonMsToDateKey(ms),
+      day: new Date(ms).getUTCDate(),
+      weekdayIndex: i,
+    };
+  });
+}

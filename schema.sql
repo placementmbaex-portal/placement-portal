@@ -707,3 +707,15 @@ create policy events_select on events
 
 create policy events_admin on events
   for all to authenticated using (is_admin()) with check (is_admin());
+
+
+-- =====================================================================
+-- MOBILE UI OVERHAUL -- announcement categories
+-- Drives the chips and filter pills on the student feed and the category
+-- select in the moderation queue. NOT NULL + DEFAULT backfills existing
+-- rows to 'general' automatically.
+-- =====================================================================
+
+alter table announcements
+  add column if not exists category text not null default 'general'
+    check (category in ('ppt', 'shortlist', 'deadline', 'process', 'general'));

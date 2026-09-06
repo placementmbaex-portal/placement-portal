@@ -22,10 +22,10 @@ export function GoogleSignInButton() {
       type="button"
       onClick={handleSignIn}
       disabled={pending}
-      className="flex w-full items-center justify-center gap-3 rounded-md border border-zinc-300 bg-white px-4 py-3 text-sm font-medium text-zinc-800 shadow-sm transition-colors hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-60 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:hover:bg-zinc-800"
+      className="mt-[22px] flex h-12 w-full items-center justify-center gap-2.5 rounded-[10px] border border-rule bg-surface font-body text-[15px] font-semibold text-ink disabled:cursor-not-allowed disabled:opacity-60"
     >
       <GoogleIcon />
-      {pending ? "Redirecting…" : "Sign in with Google"}
+      {pending ? "Redirecting…" : "Continue with Google"}
     </button>
   );
 }

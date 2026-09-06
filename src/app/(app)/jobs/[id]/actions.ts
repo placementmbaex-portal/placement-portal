@@ -39,6 +39,7 @@ export async function applyToJob(
 
   revalidatePath(`/jobs/${jobId}`);
   revalidatePath("/");
+  revalidatePath("/applications");
   return null;
 }
 
@@ -76,6 +77,7 @@ export async function withdrawApplication(
 
   revalidatePath(`/jobs/${application.job_id}`);
   revalidatePath("/");
+  revalidatePath("/applications");
 }
 
 export async function viewJd(

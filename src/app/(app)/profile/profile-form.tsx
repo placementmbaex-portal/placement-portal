@@ -18,13 +18,12 @@ export function ProfileForm({
   );
 
   return (
-    <form
-      action={action}
-      className="space-y-3 rounded-lg border border-zinc-200 p-4 dark:border-zinc-800"
-    >
-      <h2 className="text-sm font-medium text-zinc-500">Contact details</h2>
-      <div className="space-y-1">
-        <label htmlFor="phone" className="block text-sm font-medium">
+    <form action={action} className="flex flex-col gap-2.5">
+      <div>
+        <label
+          htmlFor="phone"
+          className="mb-[5px] block text-[12px] text-slate"
+        >
           Phone
         </label>
         <input
@@ -32,11 +31,14 @@ export function ProfileForm({
           name="phone"
           type="tel"
           defaultValue={phone ?? ""}
-          className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
+          className="flex h-11 w-full items-center rounded-lg border border-rule bg-surface px-3 text-[14.5px] text-ink focus:outline-2 focus:outline-offset-2 focus:outline-ink"
         />
       </div>
-      <div className="space-y-1">
-        <label htmlFor="linkedin" className="block text-sm font-medium">
+      <div>
+        <label
+          htmlFor="linkedin"
+          className="mb-[5px] block text-[12px] text-slate"
+        >
           LinkedIn
         </label>
         <input
@@ -44,26 +46,20 @@ export function ProfileForm({
           name="linkedin"
           type="text"
           defaultValue={linkedin ?? ""}
-          placeholder="https://linkedin.com/in/..."
-          className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
+          placeholder="linkedin.com/in/…"
+          className="flex h-11 w-full items-center rounded-lg border border-rule bg-surface px-3 text-[14.5px] text-ink focus:outline-2 focus:outline-offset-2 focus:outline-ink"
         />
       </div>
       {state?.error && (
-        <p className="text-sm text-red-600 dark:text-red-400">
-          {state.error}
-        </p>
+        <p className="text-[13px] text-closing">{state.error}</p>
       )}
-      {state?.success && (
-        <p className="text-sm text-emerald-600 dark:text-emerald-400">
-          Saved.
-        </p>
-      )}
+      {state?.success && <p className="text-[13px] text-live">Saved.</p>}
       <button
         type="submit"
         disabled={pending}
-        className="rounded-md bg-zinc-900 px-4 py-2 text-sm font-medium text-white disabled:opacity-60 dark:bg-zinc-100 dark:text-zinc-900"
+        className="flex h-11 items-center justify-center rounded-lg bg-navy font-body text-[14.5px] font-semibold text-white disabled:opacity-60"
       >
-        {pending ? "Saving…" : "Save"}
+        {pending ? "Saving…" : "Save changes"}
       </button>
     </form>
   );

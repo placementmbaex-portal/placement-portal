@@ -63,7 +63,29 @@ one of them. There are no invented brand colours.
 /* Deadline state */
 --live:    #0F7B54;   /* open, more than 48 hours left */
 --shut:    #8B94A3;   /* closed, withdrawn, past */
+
+/* Mobile shell (added for the mobile-first overhaul) */
+--scroll:  #F4F5F7;   /* the scrolling list ground behind cards on phone */
 ```
+
+**Category chips.** A defined, closed exception to "colour reserved for time" —
+these mark what an announcement or application status *is*, not when
+something is due. `border-radius: 5px`, `padding: 4px 7px`, `font-weight: 700`,
+`10px`, `letter-spacing: .07em`, uppercase.
+
+| Category | Background | Text |
+| --- | --- | --- |
+| Pre-placement talk | `#E7EEF6` | `#014488` |
+| Shortlist / result | `#E4F1EC` | `#0C6B49` |
+| Deadline change | `#FDEAE0` | `#B03604` |
+| Process / logistics | `#F2EAE4` | `#5C3111` |
+| General notice | `#ECEFF3` | `#4C5866` |
+| Pinned (additional chip, not a category) | `#E7EEF6` | `#014488` |
+
+Application-status chips reuse these: Applied → Pre-placement-talk colours,
+Shortlisted / Offer → Shortlist colours, In process / Not selected → General-
+notice colours. This is the entire chip vocabulary — do not invent a new pair
+for a category not listed here.
 
 **Why two oranges.** The logo orange is gorgeous and fails contrast as text at
 3.2:1. It is fine as a 3px rule, where the requirement is 3:1 for non-text
@@ -94,6 +116,9 @@ and Plex sets figures that align in a column.
 --font-body:    'IBM Plex Sans', system-ui, sans-serif;
 ```
 
+IBM Plex Sans is loaded at four weights: 400, 500, and (added for the mobile
+overhaul) 600 and 700 — the eyebrow, chip and tab-label roles below need them.
+
 Scale, in px / line-height:
 
 | Role | Size | Family | Weight |
@@ -103,56 +128,56 @@ Scale, in px / line-height:
 | Job or company name | 17 / 1.35 | display | 600 |
 | Body | 15 / 1.55 | body | 400 |
 | Metadata, table cells | 13.5 / 1.45 | body | 400 |
-| Countdown, counts | 13.5 / 1.4 | body | 500, `font-variant-numeric: tabular-nums` |
+| Countdown, counts, table numbers | 13.5 / 1.4 | body | 500, `font-variant-numeric: tabular-nums` |
+| Eyebrow above a screen title | 10.5 | body | 600, `letter-spacing: .1em`, uppercase |
+| Chip | 10 | body | 700, `letter-spacing: .07em`, uppercase |
+| Tab label | 10.5 | body | 600 |
+| Big stat | 34–44 / 1 | body | 600, `tabular-nums` |
 
 Body copy caps at 68 characters per line. Announcements are the only long-form
 text in the product and they must not run the full width of a laptop screen.
 
-**Do not** use all caps for labels, add an eyebrow above a heading, or set small
-metadata in a monospace face.
+**Do not** use all caps for labels generally, or set small metadata in a
+monospace face. The one defined exception is the eyebrow directly above a
+screen title (added for the mobile overhaul) — that row above is its exact
+spec, and it does not license uppercase anywhere else.
 
 ---
 
 ## Layout
 
+**Superseded by the mobile-first overhaul** — see
+`design_handoff_mbaex_mobile_ui/README.md` for the current, authoritative
+shell spec. Summary: the student app is a hard 390px column, locked to that
+width and centred on the IIM Calcutta brown at ≥768px, edge-to-edge on a
+phone. Sticky brand header (seal + wordmark + avatar) on top, sticky
+five-tab bottom nav on the bottom, everything else scrolls between them.
+Admin is the only place the layout goes wide: a brown top bar with two rows
+(brand + tabs) instead of a sidebar, then fluid-width dense tables.
+
 ```
-STUDENT — one column, max-width 760px, centred
+STUDENT (phone / locked column)              ADMIN (full width, ≥1024px)
 
-┌──────────────────────────────────────────┐
-│ (seal) │ MBAEx  Placements      Rahul  ⌄  │  56px, sticky, 1px bottom rule
-├──────────────────────────────────────────┤
-│                                          │
-│  Open roles                              │  section heading
-│                                          │
-│ ┃ Accenture Strategy                     │  ← 3px left rule, --flame
-│ ┃ Strategy Consulting · Mumbai           │
-│ ┃ Closes in 31 hours · Wed 12 Mar, 6 PM  │
-│ ┃                              Applied ✓ │
-│ ├──────────────────────────────────────  │  1px --rule between rows
-│ ┃ Deloitte India                         │  ← 3px left rule, --live
-│ ┃ Operations Consulting · Bengaluru      │
-│ ┃ Closes in 6 days · Mon 17 Mar, 6 PM    │
-│                                          │
-│  Your applications                       │
-│  ...                                     │
-└──────────────────────────────────────────┘
-
-
-ADMIN — sidebar plus dense table, full width
-
-┌────────────┬─────────────────────────────┐
-│ ▓ MBAEx  ▓ │  Applicants · Accenture     │
-│ ▓        ▓ │  Strategy Consulting        │
-│ ▓Dashboard▓│  ─────────────────────────  │
-│ ▓Companies▓│  Name      Roll   Exp   CV  │
-│ ▓Jobs     ▓│  ─────────────────────────  │
-│ ▓Students ▓│  A Sharma  EX01   7.5   ↓   │
-│ ▓Announce²▓│  B Rao     EX04   5.0   ↓   │
-│ ▓  brown  ▓│                             │
-└────────────┴─────────────────────────────┘
+┌──────────────────────────┐   390px         ┌──────────────────────────────┐
+│ (seal)│MBAEx        (RS) │  56px, sticky   │ ▓brown│(seal) MBAEx  ·pending▓│  row 1
+├──────────────────────────┤                 │ ▓brown│Overview Jobs ... ▓───│  row 2, tabs
+│ Placements · MBAEx 2026  │  eyebrow        ├──────────────────────────────┤
+│ Good morning, Rahul      │  screen title   │  Applicants · Accenture      │
+│                          │                 │  Strategy Consulting         │
+│ ┃ Accenture Strategy     │  ← flame rule   │  ──────────────────────────  │
+│ ┃ closing-soon band      │                 │  Name      Roll   Exp   CV   │
+│                          │                 │  ──────────────────────────  │
+│ Open roles          →    │                 │  A Sharma  EX01   7.5   ↓    │
+│ ┃ Deloitte · closes 6d   │  ← live rule    │  B Rao     EX04   5.0   ↓    │
+│                          │                 │                              │
+├──────────────────────────┤                 └──────────────────────────────┘
+│ Home Notices Roles Cal ⓟ │  56px, sticky
+└──────────────────────────┘
 ```
 
-Everything is left-aligned. Nothing is centred except the sign-in page.
+Inside the student column, content is left-aligned. Nothing is centred
+except the card contents on the sign-in screen — the shell itself is centred
+on desktop, the column's own contents are not.
 
 Spacing uses a 4px base: `4 8 12 16 24 32 48 64`. Sections are separated by 32,
 rows by 16 of internal padding.
@@ -283,16 +308,19 @@ The failure mode is the interface drifting toward a generic dashboard. Specific
 things to refuse:
 
 - Cards with rounded corners and grey shadows for every piece of content
-- Any colour that is not in the token list — the three brand values and their
-  two derivatives are the entire vocabulary
-- Brand colour inside the content area; navy for interactive elements and the
-  admin frame only, brown for the admin sidebar only
+- Any colour that is not in the token list or the category-chip table above —
+  those two lists are the entire vocabulary
+- Brand colour inside the content area for anything other than time or a
+  category chip; navy for interactive elements and the admin frame, brown for
+  the admin top bar / sidebar only
 - Setting text in `--flame`, or drawing the deadline rule in `--closing`
 - Gradients, glassmorphism, decorative background shapes
 - Fade-and-slide entrance animations on scroll
-- Icons next to every label
+- Icons next to every label (the bottom nav's tab icons are the one defined
+  exception — see the mobile handoff)
 - A stat row of four big numbers across the top of the admin dashboard
-- Tracked-out all-caps eyebrows
+- Uppercase tracking anywhere except the screen-title eyebrow and a chip —
+  see Type above
 - Emoji in the interface
 
 If a page needs one of these to look finished, the layout is wrong underneath.

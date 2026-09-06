@@ -18,6 +18,9 @@
   --live: #0f7b54;
   --shut: #8b94a3;
 
+  /* NEW — mobile UI overhaul (see design_handoff_mbaex_mobile_ui/README.md) */
+  --scroll: #f4f5f7;
+
   --background: var(--paper);
   --foreground: var(--ink);
 }
@@ -37,6 +40,7 @@
   --color-surface: var(--surface);
   --color-live: var(--live);
   --color-shut: var(--shut);
+  --color-scroll: var(--scroll);
 
   --font-display: var(--font-source-serif);
   --font-body: var(--font-plex-sans);

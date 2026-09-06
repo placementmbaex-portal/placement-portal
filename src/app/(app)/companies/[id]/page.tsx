@@ -83,7 +83,7 @@ export default async function CompanyPage({
         {jobList.length === 0 ? (
           <p className="text-sm text-zinc-500">No open roles right now.</p>
         ) : (
-          <ul className="space-y-3">
+          <ul className="flex flex-col gap-2.5">
             {jobList.map((job) => (
               <li key={job.id}>
                 <JobCard

@@ -63,6 +63,7 @@ export async function bulkUpdateStatus(
   revalidatePath(`/admin/jobs/${jobId}/applicants`);
   revalidatePath(`/jobs/${jobId}`);
   revalidatePath("/");
+  revalidatePath("/applications");
   return null;
 }
 
@@ -219,5 +220,6 @@ export async function confirmShortlist(
   revalidatePath(`/admin/jobs/${jobId}/applicants`);
   revalidatePath(`/jobs/${jobId}`);
   revalidatePath("/");
+  revalidatePath("/applications");
   return { success: true };
 }
