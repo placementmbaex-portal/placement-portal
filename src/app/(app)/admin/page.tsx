@@ -73,6 +73,12 @@ export default async function AdminHomePage() {
         >
           Announcements
         </Link>
+        <Link
+          href="/calendar"
+          className="rounded-lg border border-zinc-200 px-4 py-3 text-sm font-medium text-zinc-900 hover:bg-zinc-50 dark:border-zinc-800 dark:text-zinc-50 dark:hover:bg-zinc-900"
+        >
+          Calendar
+        </Link>
       </nav>
     </main>
   );

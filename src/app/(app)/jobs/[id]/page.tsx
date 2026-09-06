@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import {
+  formatApplicationStatus,
   formatDateIST,
   formatCountdown,
   formatDateTimeIST,
@@ -27,6 +28,8 @@ type JobDetail = {
 type ApplicationWithCv = {
   id: string;
   applied_at: string;
+  status: string;
+  status_changed_at: string;
   cv: { label: string } | null;
 };
 
@@ -67,7 +70,7 @@ export default async function JobPage({
         .order("created_at", { ascending: false }),
       supabase
         .from("applications")
-        .select("id, applied_at, cv:cvs(label)")
+        .select("id, applied_at, status, status_changed_at, cv:cvs(label)")
         .eq("job_id", id)
         .eq("student_id", user.id)
         .maybeSingle()
@@ -155,6 +158,13 @@ export default async function JobPage({
               You applied with{" "}
               <span className="font-medium">{application.cv?.label}</span> on{" "}
               {formatDateIST(application.applied_at)}.
+            </p>
+            <p className="text-[15px] leading-[1.55] text-ink">
+              Status: {formatApplicationStatus(application.status)}
+              <span className="text-slate">
+                {" "}
+                · Updated {formatDateIST(application.status_changed_at)}
+              </span>
             </p>
             {!deadlinePassed && (
               <form action={withdrawApplication.bind(null, application.id)}>

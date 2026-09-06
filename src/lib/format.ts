@@ -1,3 +1,24 @@
+export type ApplicationStatus =
+  | "applied"
+  | "shortlisted"
+  | "in_process"
+  | "offer"
+  | "not_selected";
+
+const APPLICATION_STATUS_LABELS: Record<ApplicationStatus, string> = {
+  applied: "Applied",
+  shortlisted: "Shortlisted",
+  in_process: "In process",
+  offer: "Offer",
+  not_selected: "Not selected",
+};
+
+export function formatApplicationStatus(status: string): string {
+  return (
+    APPLICATION_STATUS_LABELS[status as ApplicationStatus] ?? status
+  );
+}
+
 export function formatDateIST(iso: string) {
   return new Intl.DateTimeFormat("en-IN", {
     timeZone: "Asia/Kolkata",

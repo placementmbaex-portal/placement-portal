@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { formatDateIST } from "@/lib/format";
+import { formatApplicationStatus, formatDateIST } from "@/lib/format";
 import { JobCard } from "@/components/job-card";
 import {
   AnnouncementCard,
@@ -22,6 +22,8 @@ type OpenJob = {
 type ApplicationRow = {
   id: string;
   applied_at: string;
+  status: string;
+  status_changed_at: string;
   job: { id: string; title: string; company: { name: string } | null } | null;
   cv: { label: string } | null;
 };
@@ -80,7 +82,7 @@ export default async function DashboardPage() {
     supabase
       .from("applications")
       .select(
-        "id, applied_at, job:jobs(id, title, company:companies(name)), cv:cvs(label)",
+        "id, applied_at, status, status_changed_at, job:jobs(id, title, company:companies(name)), cv:cvs(label)",
       )
       .eq("student_id", user.id)
       .order("applied_at", { ascending: false })
@@ -272,6 +274,13 @@ export default async function DashboardPage() {
                 <p className="mt-1 text-[13.5px] leading-[1.4] text-slate">
                   CV: {application.cv?.label} · Applied{" "}
                   {formatDateIST(application.applied_at)}
+                </p>
+                <p className="mt-1 text-[13.5px] leading-[1.4] text-ink">
+                  {formatApplicationStatus(application.status)}
+                  <span className="text-slate">
+                    {" "}
+                    · Updated {formatDateIST(application.status_changed_at)}
+                  </span>
                 </p>
               </Link>
             ))}

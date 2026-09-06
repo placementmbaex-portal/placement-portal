@@ -1,8 +1,14 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requireAdmin } from "@/lib/supabase/require-admin";
-import { formatDateTimeIST } from "@/lib/format";
+import {
+  formatApplicationStatus,
+  formatDateIST,
+  formatDateTimeIST,
+} from "@/lib/format";
 import { viewApplicantCv } from "./actions";
+import { BulkStatusForm, BULK_STATUS_FORM_ID } from "./bulk-status-form";
+import { ShortlistUploadForm } from "./shortlist-upload-form";
 
 type JobHeader = {
   id: string;
@@ -14,6 +20,8 @@ type JobHeader = {
 type ApplicantRow = {
   id: string;
   applied_at: string;
+  status: string;
+  status_changed_at: string;
   cv: { label: string; file_path: string } | null;
   student: {
     name: string;
@@ -50,7 +58,7 @@ export default async function JobApplicantsPage({
   const { data: applications } = await supabase
     .from("applications")
     .select(
-      "id, applied_at, cv:cvs(label, file_path), student:students(name, roll_no, total_experience_years)",
+      "id, applied_at, status, status_changed_at, cv:cvs(label, file_path), student:students(name, roll_no, total_experience_years)",
     )
     .eq("job_id", jobId)
     .overrideTypes<ApplicantRow[], { merge: false }>();
@@ -74,22 +82,24 @@ export default async function JobApplicantsPage({
   }
 
   return (
-    <main className="mx-auto flex w-full max-w-4xl flex-1 flex-col gap-6 px-4 py-6">
+    <main className="mx-auto flex w-full max-w-4xl flex-1 flex-col gap-6 px-4 py-8">
       <Link
         href="/admin/jobs"
-        className="text-sm text-zinc-500 hover:underline"
+        className="text-[13.5px] text-slate hover:underline"
       >
         ← Jobs
       </Link>
 
       <div>
-        <h1 className="text-lg font-semibold text-zinc-900 dark:text-zinc-50">
+        <h1 className="font-display text-[21px] leading-[1.3] font-semibold text-ink">
           {job.title}
         </h1>
-        <p className="text-sm text-zinc-500">{job.company?.name}</p>
-        <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
+        <p className="text-[13.5px] leading-[1.45] text-slate">
+          {job.company?.name}
+        </p>
+        <p className="mt-1 text-[13.5px] leading-[1.45] text-slate">
           {job.deadline
-            ? `Deadline: ${formatDateTimeIST(job.deadline)}`
+            ? `Deadline: ${formatDateTimeIST(job.deadline)} IST`
             : "No deadline"}{" "}
           · {applicantList.length} applicant
           {applicantList.length === 1 ? "" : "s"}
@@ -99,93 +109,116 @@ export default async function JobApplicantsPage({
       <div className="flex flex-wrap gap-3">
         <a
           href={`/admin/jobs/${job.id}/applicants/cvs`}
-          className="rounded-md border border-zinc-300 px-4 py-2 text-sm font-medium text-zinc-800 hover:bg-zinc-50 dark:border-zinc-700 dark:text-zinc-100 dark:hover:bg-zinc-900"
+          className="flex h-10 items-center rounded-md border border-navy px-4 text-[15px] font-medium text-navy hover:bg-surface"
         >
           Download CVs (ZIP)
         </a>
         <a
           href={`/admin/jobs/${job.id}/applicants/export`}
-          className="rounded-md border border-zinc-300 px-4 py-2 text-sm font-medium text-zinc-800 hover:bg-zinc-50 dark:border-zinc-700 dark:text-zinc-100 dark:hover:bg-zinc-900"
+          className="flex h-10 items-center rounded-md border border-navy px-4 text-[15px] font-medium text-navy hover:bg-surface"
         >
           Export Excel
         </a>
       </div>
 
       {applicantList.length === 0 ? (
-        <p className="text-sm text-zinc-500">No applicants yet.</p>
+        <p className="text-[15px] leading-[1.55] text-slate">
+          No applicants yet.
+        </p>
       ) : (
-        <div className="overflow-x-auto rounded-lg border border-zinc-200 dark:border-zinc-800">
-          <table className="w-full text-left text-sm">
-            <thead className="border-b border-zinc-200 text-xs text-zinc-500 dark:border-zinc-800">
-              <tr>
-                <th className="px-3 py-2 font-medium">S. No.</th>
-                <th className="px-3 py-2 font-medium">
-                  <Link href={sortHref("name")} className="hover:underline">
-                    Name{sortIndicator("name")}
-                  </Link>
-                </th>
-                <th className="px-3 py-2 font-medium">Roll No.</th>
-                <th className="px-3 py-2 font-medium">Experience</th>
-                <th className="px-3 py-2 font-medium">CV</th>
-                <th className="px-3 py-2 font-medium" />
-                <th className="px-3 py-2 font-medium">
-                  <Link
-                    href={sortHref("applied")}
-                    className="hover:underline"
-                  >
-                    Applied{sortIndicator("applied")}
-                  </Link>
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {applicantList.map((application, index) => (
-                <tr
-                  key={application.id}
-                  className="border-b border-zinc-100 last:border-0 dark:border-zinc-900"
-                >
-                  <td className="px-3 py-2 text-zinc-500">{index + 1}</td>
-                  <td className="px-3 py-2 font-medium text-zinc-900 dark:text-zinc-50">
-                    {application.student?.name}
-                  </td>
-                  <td className="px-3 py-2 text-zinc-500">
-                    {application.student?.roll_no ?? "—"}
-                  </td>
-                  <td className="px-3 py-2 text-zinc-500">
-                    {application.student?.total_experience_years != null
-                      ? `${application.student.total_experience_years} yrs`
-                      : "—"}
-                  </td>
-                  <td className="px-3 py-2 text-zinc-500">
-                    {application.cv?.label ?? "—"}
-                  </td>
-                  <td className="px-3 py-2">
-                    {application.cv?.file_path && (
-                      <form
-                        action={viewApplicantCv.bind(
-                          null,
-                          job.id,
-                          application.cv.file_path,
-                        )}
-                      >
-                        <button
-                          type="submit"
-                          formTarget="_blank"
-                          className="text-zinc-700 hover:underline dark:text-zinc-300"
-                        >
-                          View CV
-                        </button>
-                      </form>
-                    )}
-                  </td>
-                  <td className="px-3 py-2 whitespace-nowrap text-zinc-500">
-                    {formatDateTimeIST(application.applied_at)}
-                  </td>
+        <>
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-[13.5px]">
+              <thead className="border-b border-rule text-slate">
+                <tr>
+                  <th className="h-10 w-8 font-normal" />
+                  <th className="h-10 font-normal">S. No.</th>
+                  <th className="h-10 font-normal">
+                    <Link href={sortHref("name")} className="hover:underline">
+                      Name{sortIndicator("name")}
+                    </Link>
+                  </th>
+                  <th className="h-10 font-normal">Roll No.</th>
+                  <th className="h-10 font-normal">Experience</th>
+                  <th className="h-10 font-normal">CV</th>
+                  <th className="h-10 font-normal" />
+                  <th className="h-10 font-normal">
+                    <Link
+                      href={sortHref("applied")}
+                      className="hover:underline"
+                    >
+                      Applied{sortIndicator("applied")}
+                    </Link>
+                  </th>
+                  <th className="h-10 font-normal">Status</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody>
+                {applicantList.map((application, index) => (
+                  <tr key={application.id} className="border-b border-rule">
+                    <td className="h-10">
+                      <input
+                        type="checkbox"
+                        name="application_ids"
+                        value={application.id}
+                        form={BULK_STATUS_FORM_ID}
+                        aria-label={`Select ${application.student?.name ?? "applicant"}`}
+                        className="h-4 w-4"
+                      />
+                    </td>
+                    <td className="h-10 text-slate">{index + 1}</td>
+                    <td className="h-10 font-medium text-ink">
+                      {application.student?.name}
+                    </td>
+                    <td className="h-10 text-slate">
+                      {application.student?.roll_no ?? "—"}
+                    </td>
+                    <td className="h-10 text-slate">
+                      {application.student?.total_experience_years != null
+                        ? `${application.student.total_experience_years} yrs`
+                        : "—"}
+                    </td>
+                    <td className="h-10 text-slate">
+                      {application.cv?.label ?? "—"}
+                    </td>
+                    <td className="h-10">
+                      {application.cv?.file_path && (
+                        <form
+                          action={viewApplicantCv.bind(
+                            null,
+                            job.id,
+                            application.cv.file_path,
+                          )}
+                        >
+                          <button
+                            type="submit"
+                            formTarget="_blank"
+                            className="text-navy hover:underline"
+                          >
+                            View CV
+                          </button>
+                        </form>
+                      )}
+                    </td>
+                    <td className="h-10 whitespace-nowrap text-slate">
+                      {formatDateTimeIST(application.applied_at)}
+                    </td>
+                    <td className="h-10 whitespace-nowrap text-ink">
+                      {formatApplicationStatus(application.status)}
+                      <span className="text-slate">
+                        {" "}
+                        · {formatDateIST(application.status_changed_at)}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          <BulkStatusForm jobId={job.id} />
+          <ShortlistUploadForm jobId={job.id} />
+        </>
       )}
     </main>
   );

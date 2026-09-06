@@ -552,3 +552,158 @@ create policy announcement_attachment_insert_own on storage.objects
 
 create policy announcement_attachment_select_auth on storage.objects
   for select to authenticated using (bucket_id = 'announcement-attachments');
+
+
+-- =====================================================================
+-- R2 5.3 -- APPLICATION STATUS
+-- No enforced sequence between statuses -- a placerep can set any of the
+-- five at any time, same trust-the-admin approach as the rest of R1.
+-- =====================================================================
+
+alter table applications
+  add column if not exists status text not null default 'applied'
+    check (status in ('applied', 'shortlisted', 'in_process', 'offer', 'not_selected')),
+  add column if not exists status_changed_at timestamptz not null default now();
+
+-- ---------------------------------------------------------------------
+-- 9. Application status history. Admin-only audit trail; students see
+--    only the current status + status_changed_at on applications itself.
+-- ---------------------------------------------------------------------
+create table if not exists application_status_history (
+  id             uuid primary key default gen_random_uuid(),
+  application_id uuid not null references applications on delete cascade,
+  from_status    text,
+  to_status      text not null,
+  changed_by     uuid not null references students,
+  changed_at     timestamptz not null default now()
+);
+create index if not exists application_status_history_app_idx
+  on application_status_history (application_id);
+
+-- Only admins can reach an applications UPDATE at all (applications_admin
+-- below is the only policy that grants it), so this fires solely on
+-- admin-initiated status changes -- single or bulk, one row at a time.
+create or replace function guard_application_status()
+returns trigger
+language plpgsql security definer
+set search_path = public
+as $$
+begin
+  if new.status is distinct from old.status then
+    new.status_changed_at := now();
+    insert into application_status_history (application_id, from_status, to_status, changed_by)
+    values (new.id, old.status, new.status, auth.uid());
+  end if;
+  return new;
+end;
+$$;
+
+drop trigger if exists applications_guard_status on applications;
+create trigger applications_guard_status
+  before update on applications
+  for each row execute function guard_application_status();
+
+alter table application_status_history enable row level security;
+
+drop policy if exists application_status_history_admin on application_status_history;
+
+create policy application_status_history_admin on application_status_history
+  for select to authenticated using (is_admin());
+
+
+-- =====================================================================
+-- R2 5.4 -- BULK SHORTLIST UPLOAD (notifications, minimal)
+-- Full in-app/email delivery is 5.2, not built yet. This is just enough
+-- of the notifications table for 5.4's "fires once per student" criterion
+-- to be real: rows land here, ready for 5.2 to eventually surface them.
+-- =====================================================================
+
+create table if not exists notifications (
+  id         uuid primary key default gen_random_uuid(),
+  user_id    uuid not null references students on delete cascade,
+  type       text not null,
+  title      text not null,
+  body       text,
+  link       text,
+  read_at    timestamptz,
+  created_at timestamptz not null default now()
+);
+create index if not exists notifications_user_idx on notifications (user_id);
+
+alter table notifications enable row level security;
+
+drop policy if exists notifications_select on notifications;
+drop policy if exists notifications_admin  on notifications;
+
+create policy notifications_select on notifications
+  for select to authenticated using (user_id = auth.uid());
+create policy notifications_admin on notifications
+  for all to authenticated using (is_admin()) with check (is_admin());
+
+
+-- =====================================================================
+-- R2 5.5 -- CALENDAR
+-- Job deadlines are NOT stored here -- they're derived live from
+-- jobs.deadline at read time (that's what "no admin has to duplicate
+-- them" and "updates when a deadline moves" mean). This table only holds
+-- admin-created events: ppt/test/interview/other. 'deadline' is a type
+-- the app renders for the derived entries, never a row here.
+-- =====================================================================
+
+create table if not exists events (
+  id         uuid primary key default gen_random_uuid(),
+  title      text not null,
+  type       text not null check (type in ('ppt', 'test', 'interview', 'other')),
+  company_id uuid references companies on delete set null,
+  job_id     uuid references jobs on delete set null,
+  starts_at  timestamptz not null,
+  ends_at    timestamptz not null,
+  venue      text,
+  link       text,
+  visibility text not null default 'all' check (visibility in ('all', 'shortlisted')),
+  created_by uuid not null references students,
+  created_at timestamptz not null default now(),
+  check (venue is not null or link is not null),
+  check (visibility <> 'shortlisted' or job_id is not null),
+  check (ends_at >= starts_at)
+);
+create index if not exists events_starts_at_idx on events (starts_at);
+
+create or replace function guard_event_insert()
+returns trigger
+language plpgsql security definer
+set search_path = public
+as $$
+begin
+  new.created_by := auth.uid();
+  return new;
+end;
+$$;
+
+drop trigger if exists events_guard_insert on events;
+create trigger events_guard_insert
+  before insert on events
+  for each row execute function guard_event_insert();
+
+alter table events enable row level security;
+
+drop policy if exists events_select on events;
+drop policy if exists events_admin  on events;
+
+-- The one new RLS shape per the PRD: visible if visibility is 'all', or
+-- the viewer holds a shortlisted-or-beyond application for the linked job.
+create policy events_select on events
+  for select to authenticated
+  using (
+    visibility = 'all'
+    or is_admin()
+    or exists (
+      select 1 from applications a
+      where a.job_id = events.job_id
+        and a.student_id = auth.uid()
+        and a.status in ('shortlisted', 'in_process', 'offer')
+    )
+  );
+
+create policy events_admin on events
+  for all to authenticated using (is_admin()) with check (is_admin());

@@ -38,6 +38,9 @@ export async function Header() {
         <Link href="/profile" className="text-ink hover:underline">
           Profile
         </Link>
+        <Link href="/calendar" className="text-ink hover:underline">
+          Calendar
+        </Link>
         {student?.is_admin && (
           <>
             <Link href="/admin" className="text-ink hover:underline">
