@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState } from "react";
+import { AdminFormCard } from "@/components/admin-form-card";
 import type { CompanyFormState } from "./actions";
 
 const initialState: CompanyFormState = null;
@@ -13,6 +14,10 @@ type CompanyDefaults = {
   is_legacy_recruiter: boolean;
   logo_url: string | null;
 };
+
+const fieldClass =
+  "h-10 w-full rounded-md border border-rule px-3 text-[14px] text-ink focus:outline-2 focus:outline-offset-2 focus:outline-ink";
+const labelClass = "mb-1.5 block text-[12.5px] text-slate";
 
 export function CompanyForm({
   action,
@@ -27,92 +32,92 @@ export function CompanyForm({
   const [state, formAction, pending] = useActionState(action, initialState);
 
   return (
-    <form action={formAction} className="max-w-xl space-y-4">
-      <div className="space-y-1">
-        <label htmlFor="name" className="block text-sm font-medium">
-          Name
-        </label>
-        <input
-          id="name"
-          name="name"
-          required
-          defaultValue={defaultValues?.name}
-          className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
-        />
-      </div>
-
-      <div className="space-y-1">
-        <label htmlFor="sector" className="block text-sm font-medium">
-          Sector
-        </label>
-        <input
-          id="sector"
-          name="sector"
-          defaultValue={defaultValues?.sector ?? ""}
-          className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
-        />
-      </div>
-
-      <div className="space-y-1">
-        <label htmlFor="about" className="block text-sm font-medium">
-          About
-        </label>
-        <textarea
-          id="about"
-          name="about"
-          rows={4}
-          defaultValue={defaultValues?.about ?? ""}
-          className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
-        />
-      </div>
-
-      <div className="space-y-1">
-        <label htmlFor="tags" className="block text-sm font-medium">
-          Tags (comma separated)
-        </label>
-        <input
-          id="tags"
-          name="tags"
-          placeholder="e.g. Consulting, Analytics"
-          defaultValue={defaultValues?.tags.join(", ") ?? ""}
-          className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
-        />
-      </div>
-
-      <div className="space-y-1">
-        <label htmlFor="logo_url" className="block text-sm font-medium">
-          Logo URL
-        </label>
-        <input
-          id="logo_url"
-          name="logo_url"
-          defaultValue={defaultValues?.logo_url ?? ""}
-          className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
-        />
-      </div>
-
-      <label className="flex items-center gap-2 text-sm">
-        <input
-          type="checkbox"
-          name="is_legacy_recruiter"
-          defaultChecked={defaultValues?.is_legacy_recruiter ?? false}
-        />
-        Legacy recruiter
-      </label>
-
-      {state?.error && (
-        <p className="text-sm text-red-600 dark:text-red-400">
-          {state.error}
-        </p>
-      )}
-
-      <button
-        type="submit"
-        disabled={pending}
-        className="rounded-md bg-zinc-900 px-4 py-2 text-sm font-medium text-white disabled:opacity-60 dark:bg-zinc-100 dark:text-zinc-900"
+    <form action={formAction}>
+      <AdminFormCard
+        title={defaultValues ? "Edit company" : "Add a company"}
+        cancelHref="/admin/companies"
+        submitLabel="Save company"
+        pending={pending}
+        error={state?.error}
       >
-        {pending ? "Saving…" : "Save"}
-      </button>
+        <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-2">
+          <div>
+            <label htmlFor="name" className={labelClass}>
+              Name
+            </label>
+            <input
+              id="name"
+              name="name"
+              required
+              defaultValue={defaultValues?.name}
+              className={fieldClass}
+            />
+          </div>
+          <div>
+            <label htmlFor="sector" className={labelClass}>
+              Sector
+            </label>
+            <input
+              id="sector"
+              name="sector"
+              defaultValue={defaultValues?.sector ?? ""}
+              className={fieldClass}
+            />
+          </div>
+        </div>
+
+        <div>
+          <label htmlFor="about" className={labelClass}>
+            About
+          </label>
+          <textarea
+            id="about"
+            name="about"
+            rows={4}
+            defaultValue={defaultValues?.about ?? ""}
+            className="w-full rounded-md border border-rule px-3 py-2.5 text-[14px] leading-[1.55] text-ink focus:outline-2 focus:outline-offset-2 focus:outline-ink"
+          />
+        </div>
+
+        <div>
+          <label htmlFor="tags" className={labelClass}>
+            Tags (comma separated)
+          </label>
+          <input
+            id="tags"
+            name="tags"
+            placeholder="e.g. Consulting, Analytics"
+            defaultValue={defaultValues?.tags.join(", ") ?? ""}
+            className={fieldClass}
+          />
+        </div>
+
+        <div>
+          <label htmlFor="logo_url" className={labelClass}>
+            Logo URL
+          </label>
+          <input
+            id="logo_url"
+            name="logo_url"
+            placeholder="https://…"
+            defaultValue={defaultValues?.logo_url ?? ""}
+            className={fieldClass}
+          />
+          <p className="mt-1.5 text-[11.5px] text-shut">
+            Falls back to two-letter initials when left blank.
+          </p>
+        </div>
+
+        <label className="flex items-center gap-2.5 text-[14px] text-ink">
+          <input
+            type="checkbox"
+            name="is_legacy_recruiter"
+            defaultChecked={defaultValues?.is_legacy_recruiter ?? false}
+            className="h-4 w-4"
+          />
+          Legacy recruiter
+        </label>
+      </AdminFormCard>
     </form>
   );
 }

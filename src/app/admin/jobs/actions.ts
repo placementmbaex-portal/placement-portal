@@ -218,3 +218,45 @@ export async function toggleJobOpen(
   revalidatePath("/");
   revalidatePath(`/jobs/${jobId}`);
 }
+
+export type DeleteJobState = { error?: string } | null;
+
+export async function deleteJob(
+  jobId: string,
+  expectedTitle: string,
+  _prevState: DeleteJobState,
+  formData: FormData,
+): Promise<DeleteJobState> {
+  const { supabase } = await requireAdmin();
+
+  const typed = ((formData.get("confirm_title") as string) ?? "").trim();
+  if (typed !== expectedTitle) {
+    return { error: "That doesn't match the role title. Nothing was deleted." };
+  }
+
+  const { data: job } = await supabase
+    .from("jobs")
+    .select("jd_path")
+    .eq("id", jobId)
+    .single();
+
+  // Applications (and their status history) cascade on delete; announcements
+  // and events referencing this job have their job_id set to null rather
+  // than being removed, per the FKs in schema.sql.
+  const { error } = await supabase.from("jobs").delete().eq("id", jobId);
+  if (error) {
+    return { error: "Could not delete the role. Please try again." };
+  }
+
+  if (job?.jd_path) {
+    await supabase.storage.from("jds").remove([job.jd_path]);
+  }
+
+  revalidatePath("/admin/jobs");
+  revalidatePath("/");
+  revalidatePath("/jobs");
+  revalidatePath("/applications");
+  revalidatePath("/calendar");
+  revalidatePath("/announcements");
+  redirect("/admin/jobs");
+}

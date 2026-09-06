@@ -20,10 +20,7 @@ export default async function EditCompanyPage({
   if (!company) notFound();
 
   return (
-    <main className="mx-auto flex w-full max-w-2xl flex-1 flex-col gap-6 px-4 py-6">
-      <h1 className="text-lg font-semibold text-zinc-900 dark:text-zinc-50">
-        Edit company
-      </h1>
+    <main>
       <CompanyForm
         action={updateCompany.bind(null, company.id)}
         defaultValues={company}

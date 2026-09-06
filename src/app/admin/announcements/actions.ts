@@ -3,17 +3,35 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireAdmin } from "@/lib/supabase/require-admin";
+import { CATEGORY_CHIPS, type AnnouncementCategory } from "@/lib/chips";
 
-export async function approveAnnouncement(id: string, _formData: FormData) {
+const VALID_CATEGORIES = Object.keys(CATEGORY_CHIPS) as AnnouncementCategory[];
+
+export async function approveAnnouncement(id: string, formData: FormData) {
   const { supabase } = await requireAdmin();
 
-  await supabase
+  const categoryRaw = (formData.get("category") as string) ?? "";
+  const category = VALID_CATEGORIES.includes(categoryRaw as AnnouncementCategory)
+    ? (categoryRaw as AnnouncementCategory)
+    : undefined;
+  const isPinned = formData.get("is_pinned") === "on";
+
+  const { error } = await supabase
     .from("announcements")
-    .update({ status: "approved" })
+    .update({
+      status: "approved",
+      is_pinned: isPinned,
+      ...(category ? { category } : {}),
+    })
     .eq("id", id);
+
+  if (error) {
+    redirect(`/admin/announcements?error=${encodeURIComponent(error.message)}`);
+  }
 
   revalidatePath("/admin/announcements");
   revalidatePath("/");
+  revalidatePath("/announcements");
 }
 
 export type RejectState = { error?: string } | null;
@@ -63,6 +81,7 @@ export async function togglePin(
 
   revalidatePath("/admin/announcements");
   revalidatePath("/");
+  revalidatePath("/announcements");
 }
 
 export async function toggleCommentsLocked(
@@ -79,4 +98,5 @@ export async function toggleCommentsLocked(
 
   revalidatePath("/admin/announcements");
   revalidatePath("/");
+  revalidatePath("/announcements");
 }

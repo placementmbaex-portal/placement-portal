@@ -19,7 +19,7 @@ function uniqueFilename(used: Set<string>, base: string) {
 }
 
 export async function GET(
-  _request: Request,
+  request: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
   // Verified against the caller's own session first, with the regular
@@ -27,6 +27,11 @@ export async function GET(
   // bulk storage download, never for authorization.
   const { supabase } = await requireAdmin();
   const { id: jobId } = await params;
+
+  const idsParam = new URL(request.url).searchParams.get("ids");
+  const applicationIds = idsParam
+    ? idsParam.split(",").map((id) => id.trim()).filter(Boolean)
+    : null;
 
   const { data: job } = await supabase
     .from("jobs")
@@ -42,10 +47,24 @@ export async function GET(
     return NextResponse.json({ error: "Job not found." }, { status: 404 });
   }
 
-  const { data: rows, error } = await supabase
-    .from("application_export")
-    .select("*")
+  // Queried directly against applications rather than application_export --
+  // that view has no application id column (its columns are the company
+  // template's, verbatim) so it can't be filtered down to a selection.
+  let rowsQuery = supabase
+    .from("applications")
+    .select("id, cv:cvs(file_path, label), student:students(name, roll_no)")
     .eq("job_id", jobId);
+  if (applicationIds) {
+    rowsQuery = rowsQuery.in("id", applicationIds);
+  }
+  const { data: rows, error } = await rowsQuery.overrideTypes<
+    {
+      id: string;
+      cv: { file_path: string; label: string } | null;
+      student: { name: string; roll_no: string | null } | null;
+    }[],
+    { merge: false }
+  >();
 
   if (error) {
     return NextResponse.json(
@@ -63,8 +82,8 @@ export async function GET(
   const zip = new JSZip();
   const usedNames = new Set<string>();
 
-  for (const row of (rows ?? []) as Record<string, unknown>[]) {
-    const cvPath = row.cv_path as string | null;
+  for (const row of rows ?? []) {
+    const cvPath = row.cv?.file_path;
     if (!cvPath) continue;
 
     const { data: file, error: downloadError } = await serviceClient.storage
@@ -72,8 +91,8 @@ export async function GET(
       .download(cvPath);
     if (downloadError || !file) continue;
 
-    const rollNo = (row["Roll No."] as string | null) || "NoRollNo";
-    const name = (row["Name"] as string | null) || "Unnamed";
+    const rollNo = row.student?.roll_no || "NoRollNo";
+    const name = row.student?.name || "Unnamed";
     const filename = uniqueFilename(
       usedNames,
       sanitizeFilename(`${rollNo}_${name}`),

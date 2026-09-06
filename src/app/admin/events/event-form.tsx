@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState } from "react";
+import { AdminFormCard } from "@/components/admin-form-card";
 import { createEvent, type EventFormState } from "./actions";
 
 const initialState: EventFormState = null;
@@ -25,7 +26,14 @@ export function EventForm({
   );
 
   return (
-    <form action={formAction} className="max-w-xl space-y-4">
+    <form action={formAction}>
+      <AdminFormCard
+        title="Add a calendar event"
+        cancelHref="/calendar"
+        submitLabel="Save event"
+        pending={pending}
+        error={state?.error}
+      >
       <div className="space-y-1">
         <label htmlFor="title" className="block text-[13.5px] text-slate">
           Title
@@ -166,17 +174,7 @@ export function EventForm({
         </select>
       </div>
 
-      {state?.error && (
-        <p className="text-[13.5px] text-closing">{state.error}</p>
-      )}
-
-      <button
-        type="submit"
-        disabled={pending}
-        className="flex h-10 items-center rounded-md bg-navy px-4 text-[15px] font-medium text-white hover:bg-navy/90 disabled:opacity-60 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
-      >
-        {pending ? "Saving…" : "Add event"}
-      </button>
+      </AdminFormCard>
     </form>
   );
 }

@@ -2,6 +2,7 @@
 
 import { useActionState } from "react";
 import type { AnnouncementFormState } from "@/lib/announcements/actions";
+import { CATEGORY_CHIPS } from "@/lib/chips";
 
 const initialState: AnnouncementFormState = null;
 
@@ -46,6 +47,24 @@ export function AnnouncementForm({
           rows={6}
           className="w-full rounded-md border border-rule px-3 py-2 text-[15px] text-ink focus:outline-2 focus:outline-offset-2 focus:outline-ink"
         />
+      </div>
+
+      <div className="space-y-1">
+        <label htmlFor="category" className="block text-[13.5px] text-slate">
+          Category
+        </label>
+        <select
+          id="category"
+          name="category"
+          defaultValue="general"
+          className="h-10 w-full rounded-md border border-rule px-3 text-[15px] text-ink focus:outline-2 focus:outline-offset-2 focus:outline-ink"
+        >
+          {Object.entries(CATEGORY_CHIPS).map(([value, chip]) => (
+            <option key={value} value={value}>
+              {chip.label}
+            </option>
+          ))}
+        </select>
       </div>
 
       <div className="space-y-1">

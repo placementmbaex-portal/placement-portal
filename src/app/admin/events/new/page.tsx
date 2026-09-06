@@ -26,10 +26,7 @@ export default async function NewEventPage() {
   }));
 
   return (
-    <main className="mx-auto flex w-full max-w-2xl flex-1 flex-col gap-6 px-4 py-8">
-      <h1 className="font-display text-[21px] leading-[1.3] font-semibold text-ink">
-        Add event
-      </h1>
+    <main>
       <EventForm companies={companies ?? []} jobs={jobOptions} />
     </main>
   );

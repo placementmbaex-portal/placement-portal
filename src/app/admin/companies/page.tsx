@@ -20,56 +20,51 @@ export default async function AdminCompaniesPage() {
   const companyList = companies ?? [];
 
   return (
-    <main className="mx-auto flex w-full max-w-4xl flex-1 flex-col gap-6 px-4 py-6">
+    <main className="flex flex-col gap-5">
       <div className="flex items-center justify-between gap-4">
-        <h1 className="text-lg font-semibold text-zinc-900 dark:text-zinc-50">
-          Companies
-        </h1>
+        <div>
+          <p className="font-body text-[10.5px] font-semibold tracking-[0.1em] text-slate uppercase">
+            {companyList.length} companies
+          </p>
+          <h1 className="mt-1 font-display text-[28px] leading-[1.2] font-semibold text-ink">
+            Companies
+          </h1>
+        </div>
         <Link
           href="/admin/companies/new"
-          className="rounded-md bg-zinc-900 px-4 py-2 text-sm font-medium text-white dark:bg-zinc-100 dark:text-zinc-900"
+          className="flex h-10 items-center rounded-lg bg-navy px-4.5 font-body text-[14px] font-semibold text-white"
         >
-          Create company
+          Add a company
         </Link>
       </div>
 
       {companyList.length === 0 ? (
-        <p className="text-sm text-zinc-500">No companies yet.</p>
+        <p className="text-[14px] text-slate">No companies yet.</p>
       ) : (
-        <div className="overflow-x-auto rounded-lg border border-zinc-200 dark:border-zinc-800">
-          <table className="w-full text-left text-sm">
-            <thead className="border-b border-zinc-200 text-xs text-zinc-500 dark:border-zinc-800">
+        <div className="overflow-x-auto rounded-lg border border-rule bg-surface">
+          <table className="w-full text-left text-[13.5px]">
+            <thead className="border-b border-rule bg-paper text-slate">
               <tr>
-                <th className="px-3 py-2 font-medium">Name</th>
-                <th className="px-3 py-2 font-medium">Sector</th>
-                <th className="px-3 py-2 font-medium">Jobs</th>
-                <th className="px-3 py-2 font-medium">Legacy</th>
-                <th className="px-3 py-2 font-medium" />
+                <th className="h-10 px-4 font-medium">Name</th>
+                <th className="h-10 px-4 font-medium">Sector</th>
+                <th className="h-10 px-4 text-right font-medium">Jobs</th>
+                <th className="h-10 px-4 font-medium">Legacy</th>
+                <th className="h-10 px-4 font-medium" />
               </tr>
             </thead>
             <tbody>
               {companyList.map((company) => (
-                <tr
-                  key={company.id}
-                  className="border-b border-zinc-100 last:border-0 dark:border-zinc-900"
-                >
-                  <td className="px-3 py-2 font-medium text-zinc-900 dark:text-zinc-50">
-                    {company.name}
-                  </td>
-                  <td className="px-3 py-2 text-zinc-500">
-                    {company.sector ?? "—"}
-                  </td>
-                  <td className="px-3 py-2 text-zinc-500">
+                <tr key={company.id} className="h-11 border-b border-rule last:border-0">
+                  <td className="px-4 font-medium text-ink">{company.name}</td>
+                  <td className="px-4 text-slate">{company.sector ?? "—"}</td>
+                  <td className="px-4 text-right tabular-nums text-ink">
                     {jobCounts.get(company.id) ?? 0}
                   </td>
-                  <td className="px-3 py-2 text-zinc-500">
+                  <td className="px-4 text-slate">
                     {company.is_legacy_recruiter ? "Yes" : "—"}
                   </td>
-                  <td className="px-3 py-2 text-right">
-                    <Link
-                      href={`/admin/companies/${company.id}/edit`}
-                      className="text-zinc-700 hover:underline dark:text-zinc-300"
-                    >
+                  <td className="px-4 text-right">
+                    <Link href={`/admin/companies/${company.id}/edit`} className="text-navy">
                       Edit
                     </Link>
                   </td>

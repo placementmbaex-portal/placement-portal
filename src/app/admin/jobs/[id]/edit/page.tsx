@@ -25,10 +25,7 @@ export default async function EditJobPage({
   if (!job) notFound();
 
   return (
-    <main className="mx-auto flex w-full max-w-2xl flex-1 flex-col gap-6 px-4 py-6">
-      <h1 className="text-lg font-semibold text-zinc-900 dark:text-zinc-50">
-        Edit job
-      </h1>
+    <main>
       <JobForm
         action={updateJob.bind(null, job.id)}
         companies={companies ?? []}
