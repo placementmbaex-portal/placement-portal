@@ -1,7 +1,16 @@
 -- =====================================================================
--- IIM Calcutta MBAEx Placement Portal -- schema v1
+-- IIM Calcutta MBAEx Placement Portal -- schema
 -- Paste the whole file into the Supabase SQL Editor and hit Run.
 -- Safe to re-run: everything is guarded.
+--
+-- Covers R1 (core: students/cvs/companies/jobs/applications) and R2
+-- (the communication layer: announcements/comments/events/notifications/
+-- application status history -- see the "R2 -- COMMUNICATION LAYER"
+-- section below). This file is meant to describe exactly what has
+-- actually been run against the live database -- if you paste and run
+-- something different from this file, update this file to match
+-- immediately afterward, or the next person to read it (human or
+-- Claude) will check code against a schema that isn't real.
 -- =====================================================================
 
 create extension if not exists pgcrypto;
@@ -326,36 +335,190 @@ join cvs      c on c.id = a.cv_id;
 
 
 -- =====================================================================
--- R2 5.1 -- ANNOUNCEMENTS & COMMENTS
+-- R2 -- COMMUNICATION LAYER
+--
+-- Everything below this line documents schema_r2.sql, the migration
+-- that was actually pasted into the Supabase SQL editor and run. An
+-- earlier version of this section described a different, more elaborate
+-- R2 design (a category column on announcements, author_id stamped by
+-- the insert trigger, a status_changed_at column on applications, a
+-- pin-cap and reply-depth guard) that was drafted here but never
+-- actually applied to the database -- schema_r2.sql was written and run
+-- independently. That gap caused real, live bugs: posting an
+-- announcement or a comment failed outright (nothing stamped author_id,
+-- so the insert violated the not-null column and the RLS check alike),
+-- and every page that read applications.status_changed_at or
+-- announcements.category broke on a "column does not exist" error. The
+-- app code has since been fixed to match what's below; keep this file
+-- in sync with whatever actually gets pasted into the SQL editor next,
+-- rather than drafting ahead of it here.
 -- =====================================================================
 
 -- ---------------------------------------------------------------------
--- 7. Announcements. Students may submit; only admins can post directly
---    (status starts 'approved') or moderate a submission into that state.
+-- 7. Application status. No enforced sequence between statuses -- a
+--    placement rep can set any of the five at any time. There is no
+--    status_changed_at column on applications; that value is derived by
+--    the app from application_status_history.changed_at instead (see
+--    lib/application-status.ts), falling back to applied_at when a
+--    status has never changed.
 -- ---------------------------------------------------------------------
-create table if not exists announcements (
-  id                uuid primary key default gen_random_uuid(),
-  author_id         uuid not null references students on delete cascade,
-  title             text not null,
-  body              text not null,
-  status            text not null default 'pending'
-                      check (status in ('pending', 'approved', 'rejected')),
-  rejection_reason  text,
-  is_pinned         boolean not null default false,
-  attachment_path   text,
-  company_id        uuid references companies on delete set null,
-  job_id            uuid references jobs on delete set null,
-  comments_locked   boolean not null default false,
-  published_at      timestamptz,
-  created_at        timestamptz not null default now()
+alter table applications
+  add column if not exists status text not null default 'applied';
+
+do $$
+begin
+  if not exists (
+    select 1 from pg_constraint where conname = 'applications_status_check'
+  ) then
+    alter table applications add constraint applications_status_check
+      check (status in ('applied', 'shortlisted', 'in_process', 'offer', 'not_selected'));
+  end if;
+end $$;
+
+create table if not exists application_status_history (
+  id             uuid primary key default gen_random_uuid(),
+  application_id uuid not null references applications on delete cascade,
+  from_status    text,
+  to_status      text not null,
+  changed_by     uuid references students,
+  changed_at     timestamptz not null default now()
 );
-create index if not exists announcements_status_idx on announcements (status);
-create index if not exists announcements_feed_idx
-  on announcements (is_pinned desc, published_at desc);
+create index if not exists ash_application_idx
+  on application_status_history (application_id);
+
+-- Logs every status change automatically; does not touch a
+-- status_changed_at column since applications doesn't have one.
+create or replace function log_status_change()
+returns trigger language plpgsql security definer
+set search_path = public as $$
+begin
+  if tg_op = 'UPDATE' and new.status is distinct from old.status then
+    insert into application_status_history
+      (application_id, from_status, to_status, changed_by)
+    values (new.id, old.status, new.status, auth.uid());
+  end if;
+  return new;
+end;
+$$;
+
+drop trigger if exists applications_log_status on applications;
+create trigger applications_log_status
+  after update on applications
+  for each row execute function log_status_change();
+
+-- Only admins may change status. In practice applications_admin (R1,
+-- above) is the only policy that grants an UPDATE at all, so the "not
+-- admin" branch here is a second line of defense, not the only one.
+-- Students still withdraw by deleting their row, never by updating it.
+create or replace function guard_application_update()
+returns trigger language plpgsql security definer
+set search_path = public as $$
+begin
+  if not is_admin() then
+    new.status := old.status;
+  end if;
+  return new;
+end;
+$$;
+
+drop trigger if exists applications_guard_update on applications;
+create trigger applications_guard_update
+  before update on applications
+  for each row execute function guard_application_update();
+
+alter table application_status_history enable row level security;
+
+drop policy if exists ash_select on application_status_history;
+drop policy if exists ash_admin  on application_status_history;
+
+-- A student may read the history of their own applications, not just
+-- admins -- lib/application-status.ts relies on this to compute "last
+-- updated" on the student-facing /applications and /jobs/[id] pages.
+create policy ash_select on application_status_history
+  for select to authenticated
+  using (
+    is_admin() or exists (
+      select 1 from applications ap
+      where ap.id = application_status_history.application_id
+        and ap.student_id = auth.uid()
+    )
+  );
+
+create policy ash_admin on application_status_history
+  for all to authenticated
+  using (is_admin()) with check (is_admin());
 
 -- ---------------------------------------------------------------------
--- 8. Comments. Threaded one level deep: a reply's parent must itself be
---    a top-level comment on the same announcement.
+-- 8. Announcements. Students may submit; only admins can post directly
+--    or moderate a submission into 'approved'. There is no category
+--    column -- an earlier draft of this schema added one, and the app
+--    briefly read/wrote it, but it was never applied here, so that code
+--    was reverted. If a category feature comes back, it needs both a
+--    real ALTER TABLE run against this database and the app code redone
+--    together, not one without the other.
+-- ---------------------------------------------------------------------
+create table if not exists announcements (
+  id               uuid primary key default gen_random_uuid(),
+  author_id        uuid not null references students on delete cascade,
+  title            text not null,
+  body             text not null,
+  status           text not null default 'pending',
+  rejection_reason text,
+  is_pinned        boolean not null default false,
+  comments_locked  boolean not null default false,
+  attachment_path  text,
+  company_id       uuid references companies on delete set null,
+  job_id           uuid references jobs on delete set null,
+  published_at     timestamptz,
+  created_at       timestamptz not null default now()
+);
+
+do $$
+begin
+  if not exists (
+    select 1 from pg_constraint where conname = 'announcements_status_check'
+  ) then
+    alter table announcements add constraint announcements_status_check
+      check (status in ('pending', 'approved', 'rejected'));
+  end if;
+end $$;
+
+create index if not exists announcements_status_idx
+  on announcements (status, published_at desc);
+
+-- A student may not self-approve or self-pin. Force both on insert and
+-- on update, and stamp published_at the first time a post is approved.
+-- Unlike an earlier draft of this function, this does NOT stamp
+-- author_id -- the app sets it explicitly on insert (see
+-- lib/announcements/actions.ts) precisely because this trigger doesn't.
+-- There is also no pin-cap or reply-depth limit enforced here; those
+-- were part of the never-applied draft too.
+create or replace function guard_announcement()
+returns trigger language plpgsql security definer
+set search_path = public as $$
+begin
+  if not is_admin() then
+    new.status    := 'pending';
+    new.is_pinned := false;
+  end if;
+
+  if new.status = 'approved' and new.published_at is null then
+    new.published_at := now();
+  end if;
+
+  return new;
+end;
+$$;
+
+drop trigger if exists announcements_guard on announcements;
+create trigger announcements_guard
+  before insert or update on announcements
+  for each row execute function guard_announcement();
+
+-- ---------------------------------------------------------------------
+-- 9. Comments. No enforced nesting-depth limit -- the app's own UI only
+--    ever offers "reply" on a top-level comment, so a second-level reply
+--    is never produced by the UI, but the database itself would allow one.
 -- ---------------------------------------------------------------------
 create table if not exists comments (
   id              uuid primary key default gen_random_uuid(),
@@ -365,131 +528,26 @@ create table if not exists comments (
   body            text not null,
   created_at      timestamptz not null default now()
 );
-create index if not exists comments_announcement_idx on comments (announcement_id);
+create index if not exists comments_announcement_idx
+  on comments (announcement_id, created_at);
 
--- ---------------------------------------------------------------------
--- Directory: exposes just id + name so any signed-in user can show
--- "who wrote this" on an announcement or comment authored by someone
--- else. No security_invoker here on purpose -- students_select only
--- lets a student read their own row, and this view intentionally runs
--- with the owner's privileges so that restriction doesn't apply to it.
--- ---------------------------------------------------------------------
-create or replace view student_names as
-select id, name from students;
-
-grant select on student_names to authenticated;
-
--- Force author_id to the caller and, for non-admins, force every
--- moderation-only field back to submission defaults regardless of what
--- was posted. Admins posting directly get published_at stamped on approval.
-create or replace function guard_announcement_insert()
-returns trigger
-language plpgsql security definer
-set search_path = public
-as $$
+-- No commenting on a locked or unapproved announcement. Like
+-- guard_announcement above, this does NOT stamp author_id -- the app
+-- sets it explicitly on insert.
+create or replace function guard_comment()
+returns trigger language plpgsql security definer
+set search_path = public as $$
+declare a announcements%rowtype;
 begin
-  new.author_id := auth.uid();
-
-  if not is_admin() then
-    new.status           := 'pending';
-    new.rejection_reason := null;
-    new.is_pinned        := false;
-    new.comments_locked  := false;
-    new.published_at     := null;
-  elsif coalesce(new.status, 'pending') = 'approved' then
-    new.status       := 'approved';
-    new.published_at := coalesce(new.published_at, now());
-  else
-    new.status := coalesce(new.status, 'pending');
-  end if;
-
-  return new;
-end;
-$$;
-
-drop trigger if exists announcements_guard_insert on announcements;
-create trigger announcements_guard_insert
-  before insert on announcements
-  for each row execute function guard_announcement_insert();
-
--- Only admins can reach an update at all (see announcements_admin below),
--- but this still enforces the business rules: a rejection needs a reason,
--- approving stamps published_at and clears any stale reason, only an
--- approved announcement can be pinned, and at most 3 may be pinned at once.
-create or replace function guard_announcement_update()
-returns trigger
-language plpgsql security definer
-set search_path = public
-as $$
-declare pinned_count int;
-begin
-  if not is_admin() then
-    return old;
-  end if;
-
-  if new.status = 'approved' and old.status <> 'approved' then
-    new.published_at := coalesce(new.published_at, now());
-    new.rejection_reason := null;
-  end if;
-
-  if new.status = 'rejected' and new.rejection_reason is null then
-    raise exception 'A rejection needs a reason.';
-  end if;
-
-  if new.status <> 'approved' then
-    new.is_pinned := false;
-  end if;
-
-  if new.is_pinned and not old.is_pinned then
-    select count(*) into pinned_count
-    from announcements
-    where is_pinned and id <> new.id;
-
-    if pinned_count >= 3 then
-      raise exception 'You can pin at most 3 announcements. Unpin one first.';
-    end if;
-  end if;
-
-  return new;
-end;
-$$;
-
-drop trigger if exists announcements_guard_update on announcements;
-create trigger announcements_guard_update
-  before update on announcements
-  for each row execute function guard_announcement_update();
-
--- Refuses a comment if the announcement isn't published, comments are
--- locked, or the reply would be nested more than one level deep.
-create or replace function guard_comment_insert()
-returns trigger
-language plpgsql security definer
-set search_path = public
-as $$
-declare
-  a      announcements%rowtype;
-  parent comments%rowtype;
-begin
-  new.author_id := auth.uid();
-
   select * into a from announcements where id = new.announcement_id;
-  if not found then
-    raise exception 'Announcement not found.';
-  end if;
-  if a.status <> 'approved' then
-    raise exception 'You can only comment on published announcements.';
-  end if;
-  if a.comments_locked then
-    raise exception 'Comments are locked on this announcement.';
-  end if;
+  if not found then raise exception 'Announcement not found.'; end if;
 
-  if new.parent_id is not null then
-    select * into parent from comments where id = new.parent_id;
-    if not found or parent.announcement_id <> new.announcement_id then
-      raise exception 'Invalid parent comment.';
+  if not is_admin() then
+    if a.status <> 'approved' then
+      raise exception 'This announcement is not open for comments.';
     end if;
-    if parent.parent_id is not null then
-      raise exception 'Replies can only be one level deep.';
+    if a.comments_locked then
+      raise exception 'Comments are closed on this announcement.';
     end if;
   end if;
 
@@ -497,127 +555,172 @@ begin
 end;
 $$;
 
-drop trigger if exists comments_guard_insert on comments;
-create trigger comments_guard_insert
+drop trigger if exists comments_guard on comments;
+create trigger comments_guard
   before insert on comments
-  for each row execute function guard_comment_insert();
+  for each row execute function guard_comment();
 
 alter table announcements enable row level security;
 alter table comments      enable row level security;
 
 drop policy if exists announcements_select on announcements;
 drop policy if exists announcements_insert on announcements;
-drop policy if exists announcements_admin  on announcements;
-drop policy if exists comments_select      on comments;
-drop policy if exists comments_insert      on comments;
-drop policy if exists comments_delete      on comments;
-drop policy if exists comments_admin       on comments;
+drop policy if exists announcements_update on announcements;
+drop policy if exists announcements_delete on announcements;
 
+-- Approved posts are visible to everyone signed in. You always see your
+-- own, whatever its status. Admins see everything, including the queue.
 create policy announcements_select on announcements
   for select to authenticated
   using (status = 'approved' or author_id = auth.uid() or is_admin());
+
+-- You may only create a post authored by you.
 create policy announcements_insert on announcements
-  for insert to authenticated with check (author_id = auth.uid());
-create policy announcements_admin on announcements
-  for all to authenticated using (is_admin()) with check (is_admin());
+  for insert to authenticated
+  with check (author_id = auth.uid());
+
+-- A student may edit their own post while it's still pending (no app UI
+-- for this yet, but the database already allows it); an admin may edit
+-- any post at any time.
+create policy announcements_update on announcements
+  for update to authenticated
+  using (is_admin() or (author_id = auth.uid() and status = 'pending'))
+  with check (is_admin() or (author_id = auth.uid() and status = 'pending'));
+
+create policy announcements_delete on announcements
+  for delete to authenticated
+  using (is_admin() or author_id = auth.uid());
+
+drop policy if exists comments_select on comments;
+drop policy if exists comments_insert on comments;
+drop policy if exists comments_delete on comments;
 
 create policy comments_select on comments
   for select to authenticated
   using (
-    exists (
+    is_admin() or exists (
       select 1 from announcements a
-      where a.id = comments.announcement_id
-        and (a.status = 'approved' or a.author_id = auth.uid() or is_admin())
+      where a.id = comments.announcement_id and a.status = 'approved'
     )
   );
-create policy comments_insert on comments
-  for insert to authenticated with check (author_id = auth.uid());
-create policy comments_delete on comments
-  for delete to authenticated using (author_id = auth.uid());
-create policy comments_admin on comments
-  for all to authenticated using (is_admin()) with check (is_admin());
 
+create policy comments_insert on comments
+  for insert to authenticated
+  with check (author_id = auth.uid());
+
+create policy comments_delete on comments
+  for delete to authenticated
+  using (is_admin() or author_id = auth.uid());
+
+-- The bucket is named 'announcements', not 'announcement-attachments' --
+-- an earlier draft used the latter name and the app briefly matched that
+-- draft instead of this bucket, so every attachment upload and every
+-- "view attachment" link 404'd until the app was corrected to match.
 insert into storage.buckets (id, name, public)
-values ('announcement-attachments', 'announcement-attachments', false)
+values ('announcements', 'announcements', false)
 on conflict (id) do nothing;
 
-drop policy if exists announcement_attachment_insert_own  on storage.objects;
-drop policy if exists announcement_attachment_select_auth on storage.objects;
+drop policy if exists ann_read_auth   on storage.objects;
+drop policy if exists ann_write_auth  on storage.objects;
+drop policy if exists ann_delete_admin on storage.objects;
 
--- Announcement attachment paths must be {author_uuid}/{filename}.pdf
-create policy announcement_attachment_insert_own on storage.objects
-  for insert to authenticated
-  with check (bucket_id = 'announcement-attachments'
-              and (storage.foldername(name))[1] = auth.uid()::text);
+create policy ann_read_auth on storage.objects
+  for select to authenticated using (bucket_id = 'announcements');
 
-create policy announcement_attachment_select_auth on storage.objects
-  for select to authenticated using (bucket_id = 'announcement-attachments');
+-- No folder-prefix restriction, unlike the cvs/jds buckets -- any
+-- authenticated user can write anywhere in this bucket. The app always
+-- writes to {author_uuid}/{uuid}.pdf by convention, but that convention
+-- isn't enforced by a policy here the way cv_insert_own enforces it.
+create policy ann_write_auth on storage.objects
+  for insert to authenticated with check (bucket_id = 'announcements');
 
-
--- =====================================================================
--- R2 5.3 -- APPLICATION STATUS
--- No enforced sequence between statuses -- a placerep can set any of the
--- five at any time, same trust-the-admin approach as the rest of R1.
--- =====================================================================
-
-alter table applications
-  add column if not exists status text not null default 'applied'
-    check (status in ('applied', 'shortlisted', 'in_process', 'offer', 'not_selected')),
-  add column if not exists status_changed_at timestamptz not null default now();
+-- Only an admin can delete -- so lib/announcements/actions.ts's
+-- best-effort cleanup of an orphaned upload (after a failed table
+-- insert) silently no-ops for a non-admin author; the file is left
+-- behind rather than deleted. Not a correctness bug, just a known
+-- leak on an already-rare failure path.
+create policy ann_delete_admin on storage.objects
+  for delete to authenticated
+  using (bucket_id = 'announcements' and is_admin());
 
 -- ---------------------------------------------------------------------
--- 9. Application status history. Admin-only audit trail; students see
---    only the current status + status_changed_at on applications itself.
+-- 10. Events. Job deadlines are NOT stored here -- they're derived live
+--     from jobs.deadline at read time. This table only holds
+--     admin-created events. 'deadline' is a valid type value (the check
+--     constraint allows it) but the app's own create-event form never
+--     offers it -- it's reserved for how the app *renders* a derived
+--     jobs.deadline entry on the calendar, never a row actually stored
+--     here.
 -- ---------------------------------------------------------------------
-create table if not exists application_status_history (
-  id             uuid primary key default gen_random_uuid(),
-  application_id uuid not null references applications on delete cascade,
-  from_status    text,
-  to_status      text not null,
-  changed_by     uuid not null references students,
-  changed_at     timestamptz not null default now()
+create table if not exists events (
+  id          uuid primary key default gen_random_uuid(),
+  title       text not null,
+  type        text not null default 'other',
+  company_id  uuid references companies on delete cascade,
+  job_id      uuid references jobs on delete cascade,
+  starts_at   timestamptz not null,
+  ends_at     timestamptz,
+  venue       text,
+  link        text,
+  visibility  text not null default 'all',
+  created_by  uuid references students,
+  created_at  timestamptz not null default now()
 );
-create index if not exists application_status_history_app_idx
-  on application_status_history (application_id);
 
--- Only admins can reach an applications UPDATE at all (applications_admin
--- below is the only policy that grants it), so this fires solely on
--- admin-initiated status changes -- single or bulk, one row at a time.
-create or replace function guard_application_status()
-returns trigger
-language plpgsql security definer
-set search_path = public
-as $$
+do $$
 begin
-  if new.status is distinct from old.status then
-    new.status_changed_at := now();
-    insert into application_status_history (application_id, from_status, to_status, changed_by)
-    values (new.id, old.status, new.status, auth.uid());
+  if not exists (select 1 from pg_constraint where conname = 'events_type_check') then
+    alter table events add constraint events_type_check
+      check (type in ('ppt', 'test', 'interview', 'deadline', 'other'));
   end if;
-  return new;
-end;
+  if not exists (select 1 from pg_constraint where conname = 'events_visibility_check') then
+    alter table events add constraint events_visibility_check
+      check (visibility in ('all', 'shortlisted'));
+  end if;
+end $$;
+
+create index if not exists events_starts_idx on events (starts_at);
+
+-- created_by and ends_at are both nullable here, and there is no insert
+-- trigger stamping created_by the way guard_application/guard_comment
+-- stamp their own author columns -- admin/events/actions.ts sets
+-- created_by explicitly for that reason. The app's own form always
+-- requires an end time, so ends_at is never actually null in practice,
+-- but the column itself doesn't require it.
+create or replace function is_shortlisted_for(p_job_id uuid)
+returns boolean language sql security definer stable
+set search_path = public as $$
+  select exists (
+    select 1 from applications
+    where job_id = p_job_id
+      and student_id = auth.uid()
+      and status in ('shortlisted', 'in_process', 'offer')
+  );
 $$;
 
-drop trigger if exists applications_guard_status on applications;
-create trigger applications_guard_status
-  before update on applications
-  for each row execute function guard_application_status();
+alter table events enable row level security;
 
-alter table application_status_history enable row level security;
+drop policy if exists events_select on events;
+drop policy if exists events_admin  on events;
 
-drop policy if exists application_status_history_admin on application_status_history;
+create policy events_select on events
+  for select to authenticated
+  using (
+    is_admin()
+    or visibility = 'all'
+    or (visibility = 'shortlisted'
+        and job_id is not null
+        and is_shortlisted_for(job_id))
+  );
 
-create policy application_status_history_admin on application_status_history
-  for select to authenticated using (is_admin());
+create policy events_admin on events
+  for all to authenticated using (is_admin()) with check (is_admin());
 
-
--- =====================================================================
--- R2 5.4 -- BULK SHORTLIST UPLOAD (notifications, minimal)
--- Full in-app/email delivery is 5.2, not built yet. This is just enough
--- of the notifications table for 5.4's "fires once per student" criterion
--- to be real: rows land here, ready for 5.2 to eventually surface them.
--- =====================================================================
-
+-- ---------------------------------------------------------------------
+-- 11. Notifications. Table now, delivery UI later (PRD 5.2). Rows land
+--     here -- e.g. one per student on a bulk shortlist confirm -- ready
+--     for an eventual in-app/email surface that doesn't exist yet.
+-- ---------------------------------------------------------------------
 create table if not exists notifications (
   id         uuid primary key default gen_random_uuid(),
   user_id    uuid not null references students on delete cascade,
@@ -628,94 +731,58 @@ create table if not exists notifications (
   read_at    timestamptz,
   created_at timestamptz not null default now()
 );
-create index if not exists notifications_user_idx on notifications (user_id);
+create index if not exists notifications_user_idx
+  on notifications (user_id, read_at, created_at desc);
+
+-- Unused by the app so far -- no UI reads or writes it yet.
+alter table students
+  add column if not exists email_notifications boolean not null default true;
 
 alter table notifications enable row level security;
 
 drop policy if exists notifications_select on notifications;
+drop policy if exists notifications_update on notifications;
 drop policy if exists notifications_admin  on notifications;
 
 create policy notifications_select on notifications
   for select to authenticated using (user_id = auth.uid());
+
+-- A student may mark their own notifications read (no app UI for this
+-- yet either, but the database already allows it).
+create policy notifications_update on notifications
+  for update to authenticated
+  using (user_id = auth.uid()) with check (user_id = auth.uid());
+
 create policy notifications_admin on notifications
-  for all to authenticated using (is_admin()) with check (is_admin());
+  for all to authenticated
+  using (is_admin()) with check (is_admin());
 
 
 -- =====================================================================
--- R2 5.5 -- CALENDAR
--- Job deadlines are NOT stored here -- they're derived live from
--- jobs.deadline at read time (that's what "no admin has to duplicate
--- them" and "updates when a deadline moves" mean). This table only holds
--- admin-created events: ppt/test/interview/other. 'deadline' is a type
--- the app renders for the derived entries, never a row here.
+-- PENDING -- drafted here, not yet applied to the database.
+--
+-- The announcements and home-page feeds resolve "who wrote this" for
+-- posts and comments authored by someone other than the viewer by
+-- querying student_names, a view that exposes just id + name. Without
+-- it, students_select's own-row-only restriction (R1, above) means a
+-- regular student's query for another author's name returns nothing,
+-- and every such name silently falls back to "Unknown" in the UI. This
+-- view was part of the earlier, never-applied R2 draft along with
+-- everything above it in this file, but the app was built assuming it
+-- exists and still queries it today -- unlike the rest of that draft,
+-- this piece has NOT been reverted out of the code, because there's no
+-- other reasonable way to serve this lookup without either running this
+-- statement or reaching for the service-role key in application code
+-- (which CLAUDE.md's rules reserve for cases RLS genuinely can't
+-- express -- a security-definer view is the more idiomatic fix here).
+-- Paste this into the SQL editor and run it to fix the "Unknown" author
+-- names; nothing else in the app needs to change once it exists.
 -- =====================================================================
 
-create table if not exists events (
-  id         uuid primary key default gen_random_uuid(),
-  title      text not null,
-  type       text not null check (type in ('ppt', 'test', 'interview', 'other')),
-  company_id uuid references companies on delete set null,
-  job_id     uuid references jobs on delete set null,
-  starts_at  timestamptz not null,
-  ends_at    timestamptz not null,
-  venue      text,
-  link       text,
-  visibility text not null default 'all' check (visibility in ('all', 'shortlisted')),
-  created_by uuid not null references students,
-  created_at timestamptz not null default now(),
-  check (venue is not null or link is not null),
-  check (visibility <> 'shortlisted' or job_id is not null),
-  check (ends_at >= starts_at)
-);
-create index if not exists events_starts_at_idx on events (starts_at);
+-- No security_invoker here on purpose -- students_select only lets a
+-- student read their own row, and this view intentionally runs with the
+-- owner's privileges so that restriction doesn't apply to it.
+create or replace view student_names as
+select id, name from students;
 
-create or replace function guard_event_insert()
-returns trigger
-language plpgsql security definer
-set search_path = public
-as $$
-begin
-  new.created_by := auth.uid();
-  return new;
-end;
-$$;
-
-drop trigger if exists events_guard_insert on events;
-create trigger events_guard_insert
-  before insert on events
-  for each row execute function guard_event_insert();
-
-alter table events enable row level security;
-
-drop policy if exists events_select on events;
-drop policy if exists events_admin  on events;
-
--- The one new RLS shape per the PRD: visible if visibility is 'all', or
--- the viewer holds a shortlisted-or-beyond application for the linked job.
-create policy events_select on events
-  for select to authenticated
-  using (
-    visibility = 'all'
-    or is_admin()
-    or exists (
-      select 1 from applications a
-      where a.job_id = events.job_id
-        and a.student_id = auth.uid()
-        and a.status in ('shortlisted', 'in_process', 'offer')
-    )
-  );
-
-create policy events_admin on events
-  for all to authenticated using (is_admin()) with check (is_admin());
-
-
--- =====================================================================
--- MOBILE UI OVERHAUL -- announcement categories
--- Drives the chips and filter pills on the student feed and the category
--- select in the moderation queue. NOT NULL + DEFAULT backfills existing
--- rows to 'general' automatically.
--- =====================================================================
-
-alter table announcements
-  add column if not exists category text not null default 'general'
-    check (category in ('ppt', 'shortlist', 'deadline', 'process', 'general'));
+grant select on student_names to authenticated;

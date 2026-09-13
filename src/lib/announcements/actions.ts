@@ -10,9 +10,9 @@ export type AnnouncementFormState = { error?: string } | null;
 
 // Shared by both the student "submit for review" form and the admin
 // "post directly" form. `publish_immediately` is only ever rendered on the
-// admin form, but guard_announcement_insert forces every moderation field
-// back to submission defaults for non-admins regardless, so it's safe for
-// one action to serve both.
+// admin form, but the live guard_announcement trigger forces status and
+// is_pinned back to submission defaults for non-admins regardless, so
+// it's safe for one action to serve both.
 export async function createAnnouncement(
   _prevState: AnnouncementFormState,
   formData: FormData,
@@ -44,7 +44,7 @@ export async function createAnnouncement(
 
     attachmentPath = `${user.id}/${crypto.randomUUID()}.pdf`;
     const { error: uploadError } = await supabase.storage
-      .from("announcement-attachments")
+      .from("announcements")
       .upload(attachmentPath, file, { contentType: "application/pdf" });
     if (uploadError) {
       return { error: "Could not upload the attachment. Please try again." };
@@ -67,7 +67,7 @@ export async function createAnnouncement(
   if (error) {
     if (attachmentPath) {
       await supabase.storage
-        .from("announcement-attachments")
+        .from("announcements")
         .remove([attachmentPath]);
     }
     return { error: "Could not submit the announcement. Please try again." };
@@ -136,7 +136,7 @@ export async function viewAnnouncementAttachment(
   if (!user) redirect("/login");
 
   const { data, error } = await supabase.storage
-    .from("announcement-attachments")
+    .from("announcements")
     .createSignedUrl(path, 60);
 
   if (error || !data) redirect(`/#announcement-${announcementId}`);
