@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { requireAdmin } from "@/lib/supabase/require-admin";
 import { formatDateTimeIST } from "@/lib/format";
-import { CATEGORY_CHIPS, type AnnouncementCategory } from "@/lib/chips";
 import { RejectDialog } from "./reject-dialog";
 import { approveAnnouncement, togglePin, toggleCommentsLocked } from "./actions";
 
@@ -9,7 +8,6 @@ type AnnouncementRow = {
   id: string;
   title: string;
   body: string;
-  category: AnnouncementCategory;
   status: "pending" | "approved" | "rejected";
   is_pinned: boolean;
   comments_locked: boolean;
@@ -43,7 +41,7 @@ export default async function AdminAnnouncementsPage({
   const { data: announcements } = await supabase
     .from("announcements")
     .select(
-      "id, title, body, category, status, is_pinned, comments_locked, rejection_reason, created_at, published_at, author:students(name, roll_no)",
+      "id, title, body, status, is_pinned, comments_locked, rejection_reason, created_at, published_at, author:students(name, roll_no)",
     )
     .order("created_at", { ascending: false })
     .overrideTypes<AnnouncementRow[], { merge: false }>();
@@ -141,26 +139,6 @@ export default async function AdminAnnouncementsPage({
                   action={approveAnnouncement.bind(null, announcement.id)}
                   className="flex w-full flex-col gap-2.5 lg:w-[230px] lg:shrink-0"
                 >
-                  <div>
-                    <label
-                      htmlFor={`category-${announcement.id}`}
-                      className="mb-1.5 block text-[11.5px] text-slate"
-                    >
-                      Category
-                    </label>
-                    <select
-                      id={`category-${announcement.id}`}
-                      name="category"
-                      defaultValue={announcement.category}
-                      className="h-9 w-full rounded-md border border-rule px-2.5 text-[13px] text-ink focus:outline-2 focus:outline-offset-2 focus:outline-ink"
-                    >
-                      {Object.entries(CATEGORY_CHIPS).map(([value, chip]) => (
-                        <option key={value} value={value}>
-                          {chip.label}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
                   <label className="flex items-center gap-2 text-[13px] text-ink">
                     <input type="checkbox" name="is_pinned" className="h-3.5 w-3.5" />
                     Pin to the top

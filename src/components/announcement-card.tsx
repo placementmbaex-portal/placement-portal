@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useActionState, useEffect, useRef, useState } from "react";
 import { formatDateTimeIST } from "@/lib/format";
-import { CATEGORY_CHIPS, PINNED_CHIP, type AnnouncementCategory } from "@/lib/chips";
+import { PINNED_CHIP } from "@/lib/chips";
 import { Chip } from "@/components/chip";
 import { ConfirmSubmitButton } from "@/components/confirm-submit-button";
 import {
@@ -26,7 +26,6 @@ export type AnnouncementData = {
   id: string;
   title: string;
   body: string;
-  category: AnnouncementCategory;
   isPinned: boolean;
   attachmentPath: string | null;
   publishedAt: string;
@@ -70,10 +69,11 @@ export function AnnouncementCard({
           : ""
       }`}
     >
-      <div className="flex flex-wrap gap-1.5">
-        {announcement.isPinned && <Chip style={PINNED_CHIP} />}
-        <Chip style={CATEGORY_CHIPS[announcement.category]} />
-      </div>
+      {announcement.isPinned && (
+        <div className="flex flex-wrap gap-1.5">
+          <Chip style={PINNED_CHIP} />
+        </div>
+      )}
 
       <p className="mt-2.5 font-display text-[17px] leading-[1.35] font-semibold text-ink">
         {announcement.title}

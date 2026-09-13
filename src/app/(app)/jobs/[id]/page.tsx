@@ -10,6 +10,7 @@ import {
 } from "@/lib/format";
 import { CompanyLogo } from "@/components/company-logo";
 import { ConfirmSubmitButton } from "@/components/confirm-submit-button";
+import { getStatusChangedAtMap } from "@/lib/application-status";
 import { ApplyDialog } from "./apply-dialog";
 import { viewJd, withdrawApplication } from "./actions";
 
@@ -29,7 +30,6 @@ type ApplicationWithCv = {
   id: string;
   applied_at: string;
   status: string;
-  status_changed_at: string;
   cv: { label: string } | null;
 };
 
@@ -70,12 +70,17 @@ export default async function JobPage({
         .order("created_at", { ascending: false }),
       supabase
         .from("applications")
-        .select("id, applied_at, status, status_changed_at, cv:cvs(label)")
+        .select("id, applied_at, status, cv:cvs(label)")
         .eq("job_id", id)
         .eq("student_id", user.id)
         .maybeSingle()
         .overrideTypes<ApplicationWithCv, { merge: false }>(),
     ]);
+
+  const statusChangedAt = application
+    ? ((await getStatusChangedAtMap(supabase, [application.id])).get(application.id) ??
+      application.applied_at)
+    : null;
 
   const cvList = cvs ?? [];
   const experience = student?.total_experience_years ?? 0;
@@ -207,7 +212,7 @@ export default async function JobPage({
               Status: {formatApplicationStatus(application.status)}
               <span className="text-slate">
                 {" "}
-                · Updated {formatDateIST(application.status_changed_at)}
+                · Updated {formatDateIST(statusChangedAt!)}
               </span>
             </p>
             {!deadlinePassed && (

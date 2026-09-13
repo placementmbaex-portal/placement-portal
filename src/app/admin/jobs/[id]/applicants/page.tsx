@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requireAdmin } from "@/lib/supabase/require-admin";
 import { formatDateTimeIST } from "@/lib/format";
+import { getStatusChangedAtMap } from "@/lib/application-status";
 import { ApplicantsTable } from "./applicants-table";
 import { ShortlistUploadForm } from "./shortlist-upload-form";
 
@@ -17,7 +18,6 @@ type ApplicantRow = {
   id: string;
   applied_at: string;
   status: string;
-  status_changed_at: string;
   cv: { label: string; file_path: string } | null;
   student: {
     name: string;
@@ -54,18 +54,27 @@ export default async function JobApplicantsPage({
   const { data: applications } = await supabase
     .from("applications")
     .select(
-      "id, applied_at, status, status_changed_at, cv:cvs(label, file_path), student:students(name, roll_no, total_experience_years)",
+      "id, applied_at, status, cv:cvs(label, file_path), student:students(name, roll_no, total_experience_years)",
     )
     .eq("job_id", jobId)
     .overrideTypes<ApplicantRow[], { merge: false }>();
 
-  const applicantList = [...(applications ?? [])].sort((a, b) => {
+  const sorted = [...(applications ?? [])].sort((a, b) => {
     const cmp =
       sort === "name"
         ? (a.student?.name ?? "").localeCompare(b.student?.name ?? "")
         : new Date(a.applied_at).getTime() - new Date(b.applied_at).getTime();
     return dir === "desc" ? -cmp : cmp;
   });
+
+  const statusChangedAtMap = await getStatusChangedAtMap(
+    supabase,
+    sorted.map((a) => a.id),
+  );
+  const applicantList = sorted.map((a) => ({
+    ...a,
+    status_changed_at: statusChangedAtMap.get(a.id) ?? a.applied_at,
+  }));
 
   return (
     <main className="flex flex-col gap-5">

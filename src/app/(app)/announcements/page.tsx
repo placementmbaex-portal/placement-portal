@@ -6,23 +6,13 @@ import {
   type AnnouncementData,
   type CommentData,
 } from "@/components/announcement-card";
-import type { AnnouncementCategory } from "@/lib/chips";
 
 const FEED_LIMIT = 50;
-
-const FILTERS: { key: string; label: string; category?: AnnouncementCategory }[] = [
-  { key: "all", label: "All" },
-  { key: "shortlist", label: "Shortlist", category: "shortlist" },
-  { key: "ppt", label: "PPT", category: "ppt" },
-  { key: "deadline", label: "Deadline", category: "deadline" },
-  { key: "process", label: "Process", category: "process" },
-];
 
 type AnnouncementRow = {
   id: string;
   title: string;
   body: string;
-  category: AnnouncementCategory;
   is_pinned: boolean;
   attachment_path: string | null;
   published_at: string;
@@ -49,11 +39,7 @@ type MySubmission = {
   created_at: string;
 };
 
-export default async function AnnouncementsPage({
-  searchParams,
-}: {
-  searchParams: Promise<{ category?: string }>;
-}) {
+export default async function AnnouncementsPage() {
   const supabase = await createClient();
   const {
     data: { user },
@@ -66,22 +52,12 @@ export default async function AnnouncementsPage({
     .eq("id", user.id)
     .single();
 
-  const { category: categoryParam } = await searchParams;
-  const activeFilter =
-    FILTERS.find((f) => f.key === categoryParam) ?? FILTERS[0];
-
-  let query = supabase
+  const { data: announcements } = await supabase
     .from("announcements")
     .select(
-      "id, title, body, category, is_pinned, attachment_path, published_at, comments_locked, author_id, company:companies(id, name), job:jobs(id, title)",
+      "id, title, body, is_pinned, attachment_path, published_at, comments_locked, author_id, company:companies(id, name), job:jobs(id, title)",
     )
-    .eq("status", "approved");
-
-  if (activeFilter.category) {
-    query = query.eq("category", activeFilter.category);
-  }
-
-  const { data: announcements } = await query
+    .eq("status", "approved")
     .order("is_pinned", { ascending: false })
     .order("published_at", { ascending: false })
     .limit(FEED_LIMIT)
@@ -141,7 +117,6 @@ export default async function AnnouncementsPage({
     id: a.id,
     title: a.title,
     body: a.body,
-    category: a.category,
     isPinned: a.is_pinned,
     attachmentPath: a.attachment_path,
     publishedAt: a.published_at,
@@ -185,25 +160,6 @@ export default async function AnnouncementsPage({
         <p className="mt-1.5 text-[11.5px] text-slate">
           Goes to the committee for approval before it appears here.
         </p>
-
-        <div
-          className="mt-4 flex gap-2 overflow-x-auto"
-          style={{ scrollbarWidth: "none" }}
-        >
-          {FILTERS.map((f) => (
-            <Link
-              key={f.key}
-              href={f.key === "all" ? "/announcements" : `/announcements?category=${f.key}`}
-              className={`flex h-[34px] shrink-0 items-center rounded-full px-3.5 font-body text-[13px] ${
-                activeFilter.key === f.key
-                  ? "bg-navy font-semibold text-white"
-                  : "border border-rule bg-surface font-medium text-ink"
-              }`}
-            >
-              {f.label}
-            </Link>
-          ))}
-        </div>
       </div>
 
       <div className="flex flex-1 flex-col gap-2.5 bg-scroll p-4">

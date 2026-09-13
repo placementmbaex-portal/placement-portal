@@ -13,7 +13,7 @@ export async function createEvent(
   _prevState: EventFormState,
   formData: FormData,
 ): Promise<EventFormState> {
-  const { supabase } = await requireAdmin();
+  const { supabase, user } = await requireAdmin();
 
   const title = ((formData.get("title") as string) ?? "").trim();
   const type = (formData.get("type") as string) ?? "";
@@ -46,6 +46,9 @@ export async function createEvent(
     };
   }
 
+  // The live events table has no guard_event_insert trigger (schema.sql's
+  // version was never applied to this database) and created_by is
+  // nullable, so it must be set explicitly here or attribution is lost.
   const { error } = await supabase.from("events").insert({
     title,
     type,
@@ -56,6 +59,7 @@ export async function createEvent(
     venue,
     link,
     visibility,
+    created_by: user.id,
   });
 
   if (error) {

@@ -3,10 +3,8 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { CATEGORY_CHIPS, type AnnouncementCategory } from "@/lib/chips";
 
 const MAX_ATTACHMENT_BYTES = 2 * 1024 * 1024;
-const VALID_CATEGORIES = Object.keys(CATEGORY_CHIPS) as AnnouncementCategory[];
 
 export type AnnouncementFormState = { error?: string } | null;
 
@@ -33,12 +31,6 @@ export async function createAnnouncement(
   const companyId = ((formData.get("company_id") as string) ?? "") || null;
   const jobId = ((formData.get("job_id") as string) ?? "") || null;
   const publishImmediately = formData.get("publish_immediately") === "on";
-  const categoryRaw = (formData.get("category") as string) ?? "general";
-  const category: AnnouncementCategory = VALID_CATEGORIES.includes(
-    categoryRaw as AnnouncementCategory,
-  )
-    ? (categoryRaw as AnnouncementCategory)
-    : "general";
 
   let attachmentPath: string | null = null;
   const file = formData.get("attachment");
@@ -59,10 +51,13 @@ export async function createAnnouncement(
     }
   }
 
+  // The live guard_announcement trigger (schema_r2.sql) doesn't stamp
+  // author_id itself -- unlike the guard_announcement_insert version in
+  // schema.sql, which was never actually applied to this database.
   const { error } = await supabase.from("announcements").insert({
     title,
     body,
-    category,
+    author_id: user.id,
     company_id: companyId,
     job_id: jobId,
     attachment_path: attachmentPath,
@@ -100,15 +95,17 @@ export async function addComment(
   const body = ((formData.get("body") as string) ?? "").trim();
   if (!body) return { error: "Write something first." };
 
+  // guard_comment (schema_r2.sql, live) doesn't stamp author_id itself,
+  // unlike schema.sql's guard_comment_insert, which was never applied.
   const { error } = await supabase.from("comments").insert({
     announcement_id: announcementId,
+    author_id: user.id,
     parent_id: parentId,
     body,
   });
 
   if (error) {
-    // Surfaces guard_comment_insert's own message (locked, unpublished,
-    // reply-of-a-reply) verbatim.
+    // Surfaces guard_comment's own message (locked, unpublished) verbatim.
     return { error: error.message };
   }
 

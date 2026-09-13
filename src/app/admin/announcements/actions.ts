@@ -3,26 +3,15 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireAdmin } from "@/lib/supabase/require-admin";
-import { CATEGORY_CHIPS, type AnnouncementCategory } from "@/lib/chips";
-
-const VALID_CATEGORIES = Object.keys(CATEGORY_CHIPS) as AnnouncementCategory[];
 
 export async function approveAnnouncement(id: string, formData: FormData) {
   const { supabase } = await requireAdmin();
 
-  const categoryRaw = (formData.get("category") as string) ?? "";
-  const category = VALID_CATEGORIES.includes(categoryRaw as AnnouncementCategory)
-    ? (categoryRaw as AnnouncementCategory)
-    : undefined;
   const isPinned = formData.get("is_pinned") === "on";
 
   const { error } = await supabase
     .from("announcements")
-    .update({
-      status: "approved",
-      is_pinned: isPinned,
-      ...(category ? { category } : {}),
-    })
+    .update({ status: "approved", is_pinned: isPinned })
     .eq("id", id);
 
   if (error) {
@@ -59,9 +48,9 @@ export async function rejectAnnouncement(
 }
 
 // Fire-and-forget toggles bound to a target value rather than "flip the
-// current one", so a stale page never un-does someone else's change.
-// Errors (namely the pin trigger's 3-item cap) redirect back with the
-// trigger's own message in the query string, matching /login's pattern.
+// current one", so a stale page never un-does someone else's change. Any
+// DB-side rejection redirects back with the trigger's own message in the
+// query string, matching /login's pattern.
 
 export async function togglePin(
   id: string,

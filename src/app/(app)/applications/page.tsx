@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { formatDateIST } from "@/lib/format";
 import { applicationStatusChip } from "@/lib/chips";
+import { getStatusChangedAtMap } from "@/lib/application-status";
 import { Chip } from "@/components/chip";
 import { ConfirmSubmitButton } from "@/components/confirm-submit-button";
 import { withdrawApplication } from "@/app/(app)/jobs/[id]/actions";
@@ -17,7 +18,6 @@ type ApplicationRow = {
   id: string;
   status: string;
   applied_at: string;
-  status_changed_at: string;
   cv: { label: string } | null;
   job: {
     id: string;
@@ -38,13 +38,17 @@ export default async function ApplicationsPage() {
   const { data: applications } = await supabase
     .from("applications")
     .select(
-      "id, status, applied_at, status_changed_at, cv:cvs(label), job:jobs(id, title, location, deadline, company:companies(name))",
+      "id, status, applied_at, cv:cvs(label), job:jobs(id, title, location, deadline, company:companies(name))",
     )
     .eq("student_id", user.id)
     .order("applied_at", { ascending: false })
     .overrideTypes<ApplicationRow[], { merge: false }>();
 
   const applicationList = applications ?? [];
+  const statusChangedAtMap = await getStatusChangedAtMap(
+    supabase,
+    applicationList.map((a) => a.id),
+  );
   const liveCount = applicationList.filter((a) =>
     ["applied", "shortlisted", "in_process"].includes(a.status),
   ).length;
@@ -130,7 +134,9 @@ export default async function ApplicationsPage() {
                 <p className="mt-3 text-[12.5px] leading-[1.45] text-slate">
                   {application.cv?.label} · applied{" "}
                   {formatDateIST(application.applied_at)} · updated{" "}
-                  {formatDateIST(application.status_changed_at)}
+                  {formatDateIST(
+                    statusChangedAtMap.get(application.id) ?? application.applied_at,
+                  )}
                 </p>
 
                 {showWithdraw && (

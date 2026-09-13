@@ -11,7 +11,6 @@ import {
 import { JobCard } from "@/components/job-card";
 import { AnnouncementCard, type AnnouncementData } from "@/components/announcement-card";
 import { getCalendarEntries } from "@/lib/calendar-data";
-import type { AnnouncementCategory } from "@/lib/chips";
 
 const OPEN_ROLES_PREVIEW = 2;
 const THIS_WEEK_PREVIEW = 3;
@@ -29,7 +28,6 @@ type PinnedAnnouncement = {
   id: string;
   title: string;
   body: string;
-  category: AnnouncementCategory;
   is_pinned: boolean;
   attachment_path: string | null;
   published_at: string;
@@ -84,7 +82,7 @@ export default async function DashboardPage() {
     supabase
       .from("announcements")
       .select(
-        "id, title, body, category, is_pinned, attachment_path, published_at, comments_locked, author_id, company:companies(id, name), job:jobs(id, title)",
+        "id, title, body, is_pinned, attachment_path, published_at, comments_locked, author_id, company:companies(id, name), job:jobs(id, title)",
       )
       .eq("status", "approved")
       .eq("is_pinned", true)
@@ -120,7 +118,6 @@ export default async function DashboardPage() {
         id: pinned.id,
         title: pinned.title,
         body: pinned.body,
-        category: pinned.category,
         isPinned: true,
         attachmentPath: pinned.attachment_path,
         publishedAt: pinned.published_at,
