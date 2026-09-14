@@ -122,7 +122,7 @@ export default async function ProfilePage() {
                     type="submit"
                     formTarget="_blank"
                     aria-label={`View ${cv.label}`}
-                    className="flex h-9 w-9 items-center justify-center rounded-lg border border-rule text-navy"
+                    className="flex h-11 w-11 items-center justify-center rounded-lg border border-rule text-navy"
                   >
                     <svg
                       width="17"
@@ -143,7 +143,7 @@ export default async function ProfilePage() {
                   <ConfirmSubmitButton
                     confirmMessage="Delete this CV? This cannot be undone."
                     pendingLabel="…"
-                    className="flex h-9 w-9 items-center justify-center rounded-lg border border-rule text-closing disabled:opacity-60"
+                    className="flex h-11 w-11 items-center justify-center rounded-lg border border-rule text-closing disabled:opacity-60"
                   >
                     <svg
                       width="17"
@@ -209,7 +209,7 @@ export default async function ProfilePage() {
 
       <div className="flex flex-col gap-3 px-5">
         {student.is_admin && (
-          <Link href="/admin" className="text-[14px] font-medium text-navy">
+          <Link href="/admin" className="flex h-11 items-center text-[14px] font-medium text-navy">
             Open admin
           </Link>
         )}

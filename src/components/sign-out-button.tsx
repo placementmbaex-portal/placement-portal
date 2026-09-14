@@ -17,7 +17,7 @@ export function SignOutButton() {
     <button
       type="button"
       onClick={handleSignOut}
-      className="text-ink hover:underline"
+      className="flex h-11 items-center text-ink hover:underline"
     >
       Sign out
     </button>

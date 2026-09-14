@@ -113,14 +113,14 @@ export default async function CalendarPage({
           <Link
             href={prevWeekHref}
             aria-label="Previous week"
-            className="flex h-9 w-9 items-center justify-center rounded-lg border border-rule text-navy"
+            className="flex h-11 w-11 items-center justify-center rounded-lg border border-rule text-navy"
           >
             ←
           </Link>
           <Link
             href={nextWeekHref}
             aria-label="Next week"
-            className="flex h-9 w-9 items-center justify-center rounded-lg border border-rule text-navy"
+            className="flex h-11 w-11 items-center justify-center rounded-lg border border-rule text-navy"
           >
             →
           </Link>
@@ -128,7 +128,7 @@ export default async function CalendarPage({
         {student?.is_admin && (
           <Link
             href="/admin/events/new"
-            className="text-[13.5px] text-navy hover:underline"
+            className="flex h-11 items-center text-[13.5px] text-navy hover:underline"
           >
             Add event
           </Link>

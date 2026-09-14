@@ -36,7 +36,7 @@ export function JobRowMenu({
         type="button"
         onClick={() => setMenuOpen((v) => !v)}
         aria-label="More actions"
-        className="px-1.5 text-[15px] tracking-[0.12em] text-slate"
+        className="flex h-11 w-8 items-center justify-center text-[15px] tracking-[0.12em] text-slate sm:h-8"
       >
         &middot;&middot;&middot;
       </button>
@@ -45,14 +45,14 @@ export function JobRowMenu({
           <form action={toggleJobOpen.bind(null, jobId, !isOpen)}>
             <button
               type="submit"
-              className="block w-full px-3.5 py-2.5 text-left text-[13px] text-ink hover:bg-paper"
+              className="flex min-h-11 w-full items-center px-3.5 text-left text-[13px] text-ink hover:bg-paper"
             >
               {isOpen ? "Close applications" : "Reopen applications"}
             </button>
           </form>
           <Link
             href={`/admin/jobs/${jobId}/applicants/export`}
-            className="block px-3.5 py-2.5 text-[13px] text-ink hover:bg-paper"
+            className="flex min-h-11 items-center px-3.5 text-[13px] text-ink hover:bg-paper"
           >
             Export applicants
           </Link>

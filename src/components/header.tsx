@@ -25,7 +25,7 @@ export async function Header() {
     .toUpperCase();
 
   return (
-    <header className="sticky top-0 z-10 flex items-center gap-3 border-b border-rule bg-surface px-5 py-2.5">
+    <header className="sticky top-0 z-10 flex h-14 items-center gap-3 border-b border-rule bg-surface px-5">
       <Image
         src="/logo-iimc.svg"
         alt="IIM Calcutta"
@@ -40,7 +40,7 @@ export async function Header() {
       <span className="flex-1" />
       <Link
         href="/profile"
-        className="flex h-[34px] w-[34px] shrink-0 items-center justify-center rounded-full bg-navy font-body text-[12.5px] font-semibold text-white"
+        className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-navy font-body text-[12.5px] font-semibold text-white"
       >
         {initials}
       </Link>

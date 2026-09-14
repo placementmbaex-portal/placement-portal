@@ -17,7 +17,7 @@ export function RejectDialog({ announcementId }: { announcementId: string }) {
       <button
         type="button"
         onClick={() => dialogRef.current?.showModal()}
-        className="text-[15px] text-closing underline underline-offset-2"
+        className="flex h-11 items-center self-start text-[15px] text-closing underline underline-offset-2 sm:h-auto"
       >
         Reject
       </button>

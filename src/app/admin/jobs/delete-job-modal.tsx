@@ -35,7 +35,7 @@ export function DeleteJobModal({
           onOpen?.();
           dialogRef.current?.showModal();
         }}
-        className="block w-full px-3.5 py-2.5 text-left font-body text-[13px] font-medium text-closing hover:bg-[#FDEAE0]"
+        className="flex min-h-11 w-full items-center px-3.5 text-left font-body text-[13px] font-medium text-closing hover:bg-[#FDEAE0]"
       >
         Delete role&hellip;
       </button>

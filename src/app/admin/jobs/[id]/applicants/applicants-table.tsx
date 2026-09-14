@@ -74,21 +74,21 @@ export function ApplicantsTable({
   return (
     <form action={action}>
       {selected.size > 0 && (
-        <div className="mb-3.5 flex flex-wrap items-center gap-4 rounded-lg bg-ink px-4.5 py-3.5">
+        <div className="mb-3.5 flex flex-wrap items-center gap-3 rounded-lg bg-ink px-4.5 py-3.5 sm:gap-4">
           <span className="font-body text-[13.5px] font-medium text-white tabular-nums">
             {selected.size} selected
           </span>
-          <span className="h-5.5 w-px bg-white/22" />
+          <span className="hidden h-5.5 w-px bg-white/22 sm:block" />
           <span className="flex items-center gap-2">
-            <span className="text-[12.5px] text-white/70">Set status to</span>
+            <span className="hidden text-[12.5px] text-white/70 sm:inline">Set status to</span>
             <select
               name="status"
               value={status}
               onChange={(e) => setStatus(e.target.value)}
-              className="h-8 rounded-md border border-white/28 bg-white/14 px-2.5 font-body text-[12.5px] font-medium text-white"
+              className="h-11 rounded-md border border-white/28 bg-white/14 px-2.5 font-body text-[12.5px] font-medium text-white sm:h-8"
             >
               <option value="" className="text-ink">
-                Choose…
+                Choose a status…
               </option>
               {STATUS_OPTIONS.map((option) => (
                 <option key={option.value} value={option.value} className="text-ink">
@@ -100,14 +100,14 @@ export function ApplicantsTable({
           <button
             type="submit"
             disabled={pending || !status}
-            className="flex h-8 items-center rounded-md bg-white px-3.5 font-body text-[12.5px] font-semibold text-ink disabled:opacity-60"
+            className="flex h-11 items-center rounded-md bg-white px-3.5 font-body text-[12.5px] font-semibold text-ink disabled:opacity-60 sm:h-8"
           >
             {pending ? "Applying…" : `Apply to ${selected.size}`}
           </button>
           <span className="flex-1" />
           <a
             href={`/admin/jobs/${jobId}/applicants/cvs?ids=${Array.from(selected).join(",")}`}
-            className="flex items-center gap-2 rounded-md bg-flame px-3.5 py-2 font-body text-[12.5px] font-semibold text-white"
+            className="flex h-11 items-center gap-2 rounded-md bg-flame px-3.5 font-body text-[12.5px] font-semibold text-white sm:h-9"
           >
             Download {selected.size} CVs as .zip
           </a>
@@ -117,7 +117,9 @@ export function ApplicantsTable({
         <p className="mb-3 text-[13.5px] text-closing">{state.error}</p>
       )}
 
-      <div className="overflow-x-auto rounded-lg border border-rule bg-surface">
+      {/* Table -- sm and up. Below 640px a stacked, tap-to-select card list
+          replaces it instead of a horizontally scrolling table. */}
+      <div className="hidden overflow-x-auto rounded-lg border border-rule bg-surface sm:block">
         <table className="w-full text-left text-[13.5px]">
           <thead className="border-b border-rule bg-paper text-slate">
             <tr>
@@ -201,6 +203,65 @@ export function ApplicantsTable({
             })}
           </tbody>
         </table>
+      </div>
+
+      <div className="flex flex-col gap-2.5 sm:hidden">
+        {applicants.map((application) => {
+          const isSelected = selected.has(application.id);
+          return (
+            <label
+              key={application.id}
+              className={`flex gap-3 rounded-[14px] border p-4 ${
+                isSelected ? "border-navy bg-[#F5F8FB]" : "border-rule bg-surface"
+              }`}
+            >
+              <input
+                type="checkbox"
+                name="application_ids"
+                value={application.id}
+                checked={isSelected}
+                onChange={(e) => toggle(application.id, e.target.checked)}
+                aria-label={`Select ${application.student?.name ?? "applicant"}`}
+                className="mt-1 h-4 w-4 shrink-0"
+              />
+              <div className="min-w-0 flex-1">
+                <div className="flex items-start justify-between gap-2">
+                  <p className="min-w-0 truncate font-medium text-ink">
+                    {application.student?.name}
+                  </p>
+                  <span title={`Updated ${formatDateTimeIST(application.status_changed_at)}`}>
+                    <Chip style={applicationStatusChip(application.status)} />
+                  </span>
+                </div>
+                <p className="mt-0.5 text-[12px] text-slate">
+                  {[
+                    application.student?.roll_no,
+                    application.student?.total_experience_years != null
+                      ? `${application.student.total_experience_years} yrs`
+                      : null,
+                    `applied ${formatDateIST(application.applied_at)}`,
+                  ]
+                    .filter(Boolean)
+                    .join(" · ")}
+                </p>
+                {application.cv?.file_path && (
+                  <form
+                    action={viewApplicantCv.bind(null, jobId, application.cv.file_path)}
+                    className="mt-1.5"
+                  >
+                    <button
+                      type="submit"
+                      formTarget="_blank"
+                      className="font-body text-[12.5px] font-medium text-navy underline underline-offset-2"
+                    >
+                      {application.cv.label}
+                    </button>
+                  </form>
+                )}
+              </div>
+            </label>
+          );
+        })}
       </div>
     </form>
   );

@@ -60,7 +60,7 @@ export default async function AdminAnnouncementsPage({
 
   return (
     <main className="flex flex-col gap-5">
-      <div className="flex items-center justify-between gap-4">
+      <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
         <div>
           {pending.length > 0 && oldestPending && (
             <p className="font-body text-[10.5px] font-semibold tracking-[0.1em] text-closing uppercase">
@@ -73,7 +73,7 @@ export default async function AdminAnnouncementsPage({
         </div>
         <Link
           href="/admin/announcements/new"
-          className="flex h-10 items-center rounded-lg bg-navy px-4.5 font-body text-[14px] font-semibold text-white"
+          className="flex h-11 w-full items-center justify-center rounded-lg bg-navy px-4.5 font-body text-[14px] font-semibold text-white sm:h-10 sm:w-auto sm:justify-start"
         >
           Post an announcement
         </Link>
@@ -92,7 +92,7 @@ export default async function AdminAnnouncementsPage({
             <Link
               key={tab.key}
               href={tab.key === "pending" ? "/admin/announcements" : `/admin/announcements?status=${tab.key}`}
-              className={`flex h-[34px] items-center rounded-lg px-3.5 font-body text-[12.5px] ${
+              className={`flex h-11 items-center rounded-lg px-3.5 font-body text-[12.5px] sm:h-[34px] ${
                 active
                   ? "bg-ink font-semibold text-white"
                   : "border border-rule bg-surface font-medium text-ink"
@@ -145,7 +145,7 @@ export default async function AdminAnnouncementsPage({
                   </label>
                   <button
                     type="submit"
-                    className="flex h-10 items-center justify-center rounded-md bg-navy font-body text-[13.5px] font-semibold text-white"
+                    className="flex h-11 items-center justify-center rounded-md bg-navy font-body text-[13.5px] font-semibold text-white sm:h-10"
                   >
                     Approve and publish
                   </button>
@@ -155,27 +155,23 @@ export default async function AdminAnnouncementsPage({
             ))}
           </div>
         )
+      ) : byTab[activeTab].length === 0 ? (
+        <p className="text-[14px] text-slate">Nothing here yet.</p>
       ) : (
-        <div className="overflow-x-auto rounded-lg border border-rule bg-surface">
-          <table className="w-full text-left text-[13.5px]">
-            <thead className="border-b border-rule bg-paper text-slate">
-              <tr>
-                <th className="h-10 px-4 font-medium">Title</th>
-                <th className="h-10 px-4 font-medium">Author</th>
-                <th className="h-10 px-4 font-medium">Status</th>
-                <th className="h-10 px-4 font-medium">Date</th>
-                <th className="h-10 px-4 font-medium" />
-              </tr>
-            </thead>
-            <tbody>
-              {byTab[activeTab].length === 0 ? (
+        <>
+          <div className="hidden overflow-x-auto rounded-lg border border-rule bg-surface sm:block">
+            <table className="w-full text-left text-[13.5px]">
+              <thead className="border-b border-rule bg-paper text-slate">
                 <tr>
-                  <td colSpan={5} className="px-4 py-6 text-slate">
-                    Nothing here yet.
-                  </td>
+                  <th className="h-10 px-4 font-medium">Title</th>
+                  <th className="h-10 px-4 font-medium">Author</th>
+                  <th className="h-10 px-4 font-medium">Status</th>
+                  <th className="h-10 px-4 font-medium">Date</th>
+                  <th className="h-10 px-4 font-medium" />
                 </tr>
-              ) : (
-                byTab[activeTab].map((announcement) => (
+              </thead>
+              <tbody>
+                {byTab[activeTab].map((announcement) => (
                   <tr key={announcement.id} className="border-b border-rule last:border-0">
                     <td className="px-4 py-2.5 text-ink">{announcement.title}</td>
                     <td className="px-4 py-2.5 text-slate">{announcement.author?.name}</td>
@@ -219,11 +215,60 @@ export default async function AdminAnnouncementsPage({
                       )}
                     </td>
                   </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          <div className="flex flex-col gap-2.5 sm:hidden">
+            {byTab[activeTab].map((announcement) => (
+              <div key={announcement.id} className="rounded-[14px] border border-rule bg-surface p-4">
+                <div className="flex items-start justify-between gap-2">
+                  <p className="min-w-0 truncate font-medium text-ink">{announcement.title}</p>
+                  <span className="shrink-0 text-[12px] text-slate">
+                    {announcement.status === "approved"
+                      ? announcement.is_pinned
+                        ? "Pinned"
+                        : "Published"
+                      : "Rejected"}
+                  </span>
+                </div>
+                <p className="mt-0.5 text-[12px] text-slate">
+                  {announcement.author?.name} ·{" "}
+                  {formatDateTimeIST(announcement.published_at ?? announcement.created_at)}
+                </p>
+                {announcement.status === "approved" ? (
+                  <div className="mt-2 flex items-center gap-4">
+                    <form action={togglePin.bind(null, announcement.id, !announcement.is_pinned)}>
+                      <button
+                        type="submit"
+                        className="flex h-11 items-center font-body text-[13px] font-medium text-navy"
+                      >
+                        {announcement.is_pinned ? "Unpin" : "Pin"}
+                      </button>
+                    </form>
+                    <form
+                      action={toggleCommentsLocked.bind(
+                        null,
+                        announcement.id,
+                        !announcement.comments_locked,
+                      )}
+                    >
+                      <button
+                        type="submit"
+                        className="flex h-11 items-center font-body text-[13px] font-medium text-navy"
+                      >
+                        {announcement.comments_locked ? "Unlock comments" : "Lock comments"}
+                      </button>
+                    </form>
+                  </div>
+                ) : (
+                  <p className="mt-1.5 text-[12.5px] text-slate">{announcement.rejection_reason}</p>
+                )}
+              </div>
+            ))}
+          </div>
+        </>
       )}
     </main>
   );

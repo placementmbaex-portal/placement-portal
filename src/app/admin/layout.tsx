@@ -44,8 +44,8 @@ export default async function AdminLayout({
 
   return (
     <div className="min-h-dvh bg-paper">
-      <div className="bg-brown px-6">
-        <div className="flex h-[58px] items-center gap-3.5">
+      <div className="bg-brown px-4 sm:px-6">
+        <div className="flex h-[58px] items-center gap-2.5 sm:gap-3.5">
           <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-paper">
             <Image
               src="/logo-iimc.svg"
@@ -55,27 +55,30 @@ export default async function AdminLayout({
               className="h-[30px] w-[30px] object-contain"
             />
           </span>
-          <span className="h-[22px] w-px bg-white/28" />
-          <span className="font-body text-[16px] font-bold text-white">
+          <span className="hidden h-[22px] w-px bg-white/28 sm:block" />
+          <span className="font-body text-[16px] font-bold whitespace-nowrap text-white">
             MBA<span className="text-flame">Ex</span>
           </span>
-          <span className="text-[13.5px] text-white/70">
+          <span className="hidden text-[13.5px] whitespace-nowrap text-white/70 sm:inline">
             Placements admin
           </span>
           <span className="flex-1" />
           <Link
             href="/admin/announcements"
-            className="flex h-8 items-center rounded-lg bg-white/14 px-3 font-body text-[12.5px] font-medium text-white"
+            className="flex h-11 shrink-0 items-center rounded-lg bg-white/14 px-2.5 font-body text-[12.5px] font-medium whitespace-nowrap text-white sm:h-8 sm:px-3"
           >
-            {pendingCount} pending approval{pendingCount === 1 ? "" : "s"}
+            <span className="sm:hidden">{pendingCount} pending</span>
+            <span className="hidden sm:inline">
+              {pendingCount} pending approval{pendingCount === 1 ? "" : "s"}
+            </span>
           </Link>
-          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-white/30 bg-white/18 font-body text-[12px] font-semibold text-white">
+          <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-white/30 bg-white/18 font-body text-[12px] font-semibold text-white sm:h-8 sm:w-8">
             {initials}
           </span>
         </div>
         <AdminTabs pendingCount={pendingCount} />
       </div>
-      <div className="px-6 pt-6.5 pb-7.5">{children}</div>
+      <div className="px-4 pt-6.5 pb-7.5 sm:px-6">{children}</div>
     </div>
   );
 }

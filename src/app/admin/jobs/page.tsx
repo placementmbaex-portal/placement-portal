@@ -104,7 +104,7 @@ export default async function AdminJobsPage({
         </div>
         <Link
           href="/admin/jobs/new"
-          className="flex h-10 items-center rounded-lg bg-navy px-4.5 font-body text-[14px] font-semibold text-white"
+          className="flex h-11 items-center rounded-lg bg-navy px-4.5 font-body text-[14px] font-semibold text-white sm:h-10"
         >
           Create a role
         </Link>
@@ -117,7 +117,7 @@ export default async function AdminJobsPage({
             <Link
               key={f.key}
               href={f.key === "all" ? "/admin/jobs" : `/admin/jobs?filter=${f.key}`}
-              className={`flex h-[34px] items-center rounded-lg px-3.5 font-body text-[12.5px] ${
+              className={`flex h-11 items-center rounded-lg px-3.5 font-body text-[12.5px] sm:h-[34px] ${
                 active
                   ? "bg-ink font-semibold text-white"
                   : "border border-rule bg-surface font-medium text-ink"
@@ -133,7 +133,7 @@ export default async function AdminJobsPage({
           name="q"
           defaultValue={q ?? ""}
           placeholder="Search company or title…"
-          className="h-[34px] w-[220px] rounded-lg border border-rule px-3 text-[12.5px] text-ink focus:outline-2 focus:outline-offset-2 focus:outline-ink"
+          className="h-11 w-full rounded-lg border border-rule px-3 text-[12.5px] text-ink focus:outline-2 focus:outline-offset-2 focus:outline-ink sm:h-[34px] sm:w-[220px]"
         />
         {filter !== "all" && <input type="hidden" name="filter" value={filter} />}
       </form>
@@ -141,45 +141,111 @@ export default async function AdminJobsPage({
       {filtered.length === 0 ? (
         <p className="text-[14px] text-slate">No roles match.</p>
       ) : (
-        <div className="overflow-x-auto rounded-lg border border-rule bg-surface">
-          <table className="w-full text-left text-[13.5px]">
-            <thead className="border-b border-rule bg-paper text-slate">
-              <tr>
-                <th className="h-10 px-4 font-medium">Company</th>
-                <th className="h-10 px-4 font-medium">Role</th>
-                <th className="h-10 px-4 font-medium">Deadline</th>
-                <th className="h-10 px-4 font-medium">Status</th>
-                <th className="h-10 px-4 text-right font-medium">Applicants</th>
-                <th className="h-10 px-4 text-right font-medium">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filtered.map((job) => {
-                const urgency = getDeadlineUrgency(job.is_open ? job.deadline : null);
-                const barColor = job.is_open ? URGENCY_COLOR[urgency] : URGENCY_COLOR.shut;
-                return (
-                  <tr key={job.id} className="h-12 border-b border-rule last:border-0">
-                    <td className="px-4 whitespace-nowrap text-ink">
-                      <span className="inline-flex items-center gap-2.5">
+        <>
+          <div className="hidden overflow-x-auto rounded-lg border border-rule bg-surface sm:block">
+            <table className="w-full text-left text-[13.5px]">
+              <thead className="border-b border-rule bg-paper text-slate">
+                <tr>
+                  <th className="h-10 px-4 font-medium">Company</th>
+                  <th className="h-10 px-4 font-medium">Role</th>
+                  <th className="h-10 px-4 font-medium">Deadline</th>
+                  <th className="h-10 px-4 font-medium">Status</th>
+                  <th className="h-10 px-4 text-right font-medium">Applicants</th>
+                  <th className="h-10 px-4 text-right font-medium">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filtered.map((job) => {
+                  const urgency = getDeadlineUrgency(job.is_open ? job.deadline : null);
+                  const barColor = job.is_open ? URGENCY_COLOR[urgency] : URGENCY_COLOR.shut;
+                  return (
+                    <tr key={job.id} className="h-12 border-b border-rule last:border-0">
+                      <td className="px-4 whitespace-nowrap text-ink">
+                        <span className="inline-flex items-center gap-2.5">
+                          <span
+                            className="h-[26px] w-2 rounded-[2px]"
+                            style={{ backgroundColor: barColor }}
+                          />
+                          {job.company?.name}
+                        </span>
+                      </td>
+                      <td className="px-4 font-display text-[14px] font-semibold text-ink">
+                        {job.title}
+                      </td>
+                      <td
+                        className="px-4 whitespace-nowrap tabular-nums"
+                        style={{ color: urgency === "urgent" && job.is_open ? "#B03604" : "#5A6675" }}
+                      >
+                        {job.deadline ? formatDateTimeIST(job.deadline) : "—"}
+                      </td>
+                      <td className="px-4">
                         <span
-                          className="h-[26px] w-2 rounded-[2px]"
-                          style={{ backgroundColor: barColor }}
+                          className="inline-flex items-center gap-1.5 font-body text-[12.5px] font-medium"
+                          style={{ color: job.is_open ? "#0F7B54" : "#5A6675" }}
+                        >
+                          <span
+                            className="h-1.75 w-1.75 rounded-full"
+                            style={{ backgroundColor: job.is_open ? "#0F7B54" : "#8B94A3" }}
+                          />
+                          {job.is_open ? "Open" : "Closed"}
+                        </span>
+                      </td>
+                      <td className="px-4 text-right tabular-nums">
+                        <Link href={`/admin/jobs/${job.id}/applicants`} className="text-navy">
+                          {applicantCounts.get(job.id) ?? 0}
+                        </Link>
+                      </td>
+                      <td className="px-4 text-right whitespace-nowrap">
+                        <Link href={`/admin/jobs/${job.id}/applicants`} className="text-navy">
+                          Applicants
+                        </Link>
+                        <span className="mx-2 text-rule">|</span>
+                        <Link href={`/admin/jobs/${job.id}/edit`} className="text-navy">
+                          Edit
+                        </Link>
+                        <span className="mx-2 text-rule">|</span>
+                        <JobRowMenu
+                          jobId={job.id}
+                          jobTitle={job.title}
+                          companyName={job.company?.name ?? ""}
+                          isOpen={job.is_open}
+                          impact={{
+                            applications: applicantCounts.get(job.id) ?? 0,
+                            offers: offerCounts.get(job.id) ?? 0,
+                            events: eventCounts.get(job.id) ?? 0,
+                            announcements: announcementCounts.get(job.id) ?? 0,
+                          }}
                         />
-                        {job.company?.name}
-                      </span>
-                    </td>
-                    <td className="px-4 font-display text-[14px] font-semibold text-ink">
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+
+          <div className="flex flex-col gap-2.5 sm:hidden">
+            {filtered.map((job) => {
+              const urgency = getDeadlineUrgency(job.is_open ? job.deadline : null);
+              const barColor = job.is_open ? URGENCY_COLOR[urgency] : URGENCY_COLOR.shut;
+              const applicantCount = applicantCounts.get(job.id) ?? 0;
+              return (
+                <div
+                  key={job.id}
+                  className="flex gap-3 rounded-[14px] border border-rule bg-surface p-4"
+                >
+                  <span
+                    className="w-1 shrink-0 self-stretch rounded-full"
+                    style={{ backgroundColor: barColor }}
+                  />
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-[12px] text-slate">{job.company?.name}</p>
+                    <p className="truncate font-display text-[15px] font-semibold text-ink">
                       {job.title}
-                    </td>
-                    <td
-                      className="px-4 whitespace-nowrap tabular-nums"
-                      style={{ color: urgency === "urgent" && job.is_open ? "#B03604" : "#5A6675" }}
-                    >
-                      {job.deadline ? formatDateTimeIST(job.deadline) : "—"}
-                    </td>
-                    <td className="px-4">
+                    </p>
+                    <div className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-[12px]">
                       <span
-                        className="inline-flex items-center gap-1.5 font-body text-[12.5px] font-medium"
+                        className="inline-flex items-center gap-1.5 font-medium"
                         style={{ color: job.is_open ? "#0F7B54" : "#5A6675" }}
                       >
                         <span
@@ -188,42 +254,52 @@ export default async function AdminJobsPage({
                         />
                         {job.is_open ? "Open" : "Closed"}
                       </span>
-                    </td>
-                    <td className="px-4 text-right tabular-nums">
-                      <Link href={`/admin/jobs/${job.id}/applicants`} className="text-navy">
-                        {applicantCounts.get(job.id) ?? 0}
-                      </Link>
-                    </td>
-                    <td className="px-4 text-right whitespace-nowrap">
-                      <Link href={`/admin/jobs/${job.id}/applicants`} className="text-navy">
-                        Applicants
-                      </Link>
-                      <span className="mx-2 text-rule">|</span>
-                      <Link href={`/admin/jobs/${job.id}/edit`} className="text-navy">
-                        Edit
-                      </Link>
-                      <span className="mx-2 text-rule">|</span>
-                      <JobRowMenu
-                        jobId={job.id}
-                        jobTitle={job.title}
-                        companyName={job.company?.name ?? ""}
-                        isOpen={job.is_open}
-                        impact={{
-                          applications: applicantCounts.get(job.id) ?? 0,
-                          offers: offerCounts.get(job.id) ?? 0,
-                          events: eventCounts.get(job.id) ?? 0,
-                          announcements: announcementCounts.get(job.id) ?? 0,
+                      <span className="text-rule">·</span>
+                      <span
+                        className="tabular-nums"
+                        style={{
+                          color: urgency === "urgent" && job.is_open ? "#B03604" : "#5A6675",
                         }}
-                      />
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
+                      >
+                        {job.deadline ? formatDateTimeIST(job.deadline) : "No deadline"}
+                      </span>
+                    </div>
+                    <div className="mt-2 flex items-center justify-between">
+                      <Link
+                        href={`/admin/jobs/${job.id}/applicants`}
+                        className="flex h-11 items-center font-body text-[13px] font-medium text-navy"
+                      >
+                        {applicantCount} applicant{applicantCount === 1 ? "" : "s"}
+                      </Link>
+                      <div className="flex items-center gap-1">
+                        <Link
+                          href={`/admin/jobs/${job.id}/edit`}
+                          className="flex h-11 items-center px-2 font-body text-[13px] font-medium text-navy"
+                        >
+                          Edit
+                        </Link>
+                        <JobRowMenu
+                          jobId={job.id}
+                          jobTitle={job.title}
+                          companyName={job.company?.name ?? ""}
+                          isOpen={job.is_open}
+                          impact={{
+                            applications: applicantCount,
+                            offers: offerCounts.get(job.id) ?? 0,
+                            events: eventCounts.get(job.id) ?? 0,
+                            announcements: announcementCounts.get(job.id) ?? 0,
+                          }}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </>
       )}
-      <p className="text-[12px] text-shut">
+      <p className="hidden text-[12px] text-shut sm:block">
         The 8px bar in the company column is the deadline state, same vocabulary as the student job row.
       </p>
     </main>

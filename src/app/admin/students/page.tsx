@@ -81,7 +81,7 @@ export default async function AdminStudentsPage({
             <a
               key={f.key}
               href={f.key === "all" ? "/admin/students" : `/admin/students?filter=${f.key}`}
-              className={`flex h-[34px] items-center rounded-lg px-3.5 font-body text-[12.5px] ${
+              className={`flex h-11 items-center rounded-lg px-3.5 font-body text-[12.5px] sm:h-[34px] ${
                 active
                   ? "bg-ink font-semibold text-white"
                   : "border border-rule bg-surface font-medium text-ink"
@@ -97,7 +97,7 @@ export default async function AdminStudentsPage({
           name="q"
           defaultValue={q ?? ""}
           placeholder="Search name or roll no…"
-          className="h-[34px] w-[200px] rounded-lg border border-rule px-3 text-[12.5px] text-ink focus:outline-2 focus:outline-offset-2 focus:outline-ink"
+          className="h-11 w-full rounded-lg border border-rule px-3 text-[12.5px] text-ink focus:outline-2 focus:outline-offset-2 focus:outline-ink sm:h-[34px] sm:w-[200px]"
         />
         {filter !== "all" && <input type="hidden" name="filter" value={filter} />}
       </form>
@@ -105,36 +105,68 @@ export default async function AdminStudentsPage({
       {filtered.length === 0 ? (
         <p className="text-[14px] text-slate">No students match.</p>
       ) : (
-        <div className="overflow-x-auto rounded-lg border border-rule bg-surface">
-          <table className="w-full text-left text-[13.5px]">
-            <thead className="border-b border-rule bg-paper text-slate">
-              <tr>
-                <th className="h-10 px-4 font-medium">Name</th>
-                <th className="h-10 px-4 font-medium">Roll no.</th>
-                <th className="h-10 px-4 text-right font-medium">Exp.</th>
-                <th className="h-10 px-4 text-right font-medium">CVs</th>
-                <th className="h-10 px-4 text-right font-medium">Applications</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filtered.map((student) => (
-                <tr key={student.id} className="h-11 border-b border-rule last:border-0">
-                  <td className="px-4 font-medium text-ink">{student.name}</td>
-                  <td className="px-4 tabular-nums text-slate">{student.roll_no ?? "—"}</td>
-                  <td className="px-4 text-right tabular-nums text-ink">
-                    {student.total_experience_years ?? "—"}
-                  </td>
-                  <td className="px-4 text-right tabular-nums text-ink">
-                    {cvCounts.get(student.id) ?? 0}
-                  </td>
-                  <td className="px-4 text-right tabular-nums text-ink">
-                    {applicationCounts.get(student.id) ?? 0}
-                  </td>
+        <>
+          <div className="hidden overflow-x-auto rounded-lg border border-rule bg-surface sm:block">
+            <table className="w-full text-left text-[13.5px]">
+              <thead className="border-b border-rule bg-paper text-slate">
+                <tr>
+                  <th className="h-10 px-4 font-medium">Name</th>
+                  <th className="h-10 px-4 font-medium">Roll no.</th>
+                  <th className="h-10 px-4 text-right font-medium">Exp.</th>
+                  <th className="h-10 px-4 text-right font-medium">CVs</th>
+                  <th className="h-10 px-4 text-right font-medium">Applications</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody>
+                {filtered.map((student) => (
+                  <tr key={student.id} className="h-11 border-b border-rule last:border-0">
+                    <td className="px-4 font-medium text-ink">{student.name}</td>
+                    <td className="px-4 tabular-nums text-slate">{student.roll_no ?? "—"}</td>
+                    <td className="px-4 text-right tabular-nums text-ink">
+                      {student.total_experience_years ?? "—"}
+                    </td>
+                    <td className="px-4 text-right tabular-nums text-ink">
+                      {cvCounts.get(student.id) ?? 0}
+                    </td>
+                    <td className="px-4 text-right tabular-nums text-ink">
+                      {applicationCounts.get(student.id) ?? 0}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          <div className="flex flex-col gap-2.5 sm:hidden">
+            {filtered.map((student) => (
+              <div key={student.id} className="rounded-[14px] border border-rule bg-surface p-4">
+                <div className="flex items-baseline justify-between gap-2">
+                  <p className="min-w-0 truncate font-display text-[15px] font-semibold text-ink">
+                    {student.name}
+                  </p>
+                  <span className="shrink-0 text-[12px] tabular-nums text-slate">
+                    {student.roll_no ?? "—"}
+                  </span>
+                </div>
+                <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-[12.5px] text-slate">
+                  <span>
+                    {student.total_experience_years != null
+                      ? `${student.total_experience_years} yrs experience`
+                      : "Experience not set"}
+                  </span>
+                  <span>
+                    {cvCounts.get(student.id) ?? 0} CV
+                    {(cvCounts.get(student.id) ?? 0) === 1 ? "" : "s"}
+                  </span>
+                  <span>
+                    {applicationCounts.get(student.id) ?? 0} application
+                    {(applicationCounts.get(student.id) ?? 0) === 1 ? "" : "s"}
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </>
       )}
       <p className="text-[12px] text-shut">
         &ldquo;Last opened&rdquo; and active/dormant status need a last-seen timestamp not yet
