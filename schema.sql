@@ -759,7 +759,7 @@ create policy notifications_admin on notifications
 
 
 -- =====================================================================
--- PENDING -- drafted here, not yet applied to the database.
+-- DIRECTORY VIEW
 --
 -- The announcements and home-page feeds resolve "who wrote this" for
 -- posts and comments authored by someone other than the viewer by
@@ -769,14 +769,12 @@ create policy notifications_admin on notifications
 -- and every such name silently falls back to "Unknown" in the UI. This
 -- view was part of the earlier, never-applied R2 draft along with
 -- everything above it in this file, but the app was built assuming it
--- exists and still queries it today -- unlike the rest of that draft,
--- this piece has NOT been reverted out of the code, because there's no
--- other reasonable way to serve this lookup without either running this
--- statement or reaching for the service-role key in application code
+-- exists and queries it regardless -- rather than reverting that code,
+-- this one piece of the draft was applied on its own, separately from
+-- schema_r2.sql, since there's no other reasonable way to serve this
+-- lookup without reaching for the service-role key in application code
 -- (which CLAUDE.md's rules reserve for cases RLS genuinely can't
 -- express -- a security-definer view is the more idiomatic fix here).
--- Paste this into the SQL editor and run it to fix the "Unknown" author
--- names; nothing else in the app needs to change once it exists.
 -- =====================================================================
 
 -- No security_invoker here on purpose -- students_select only lets a
