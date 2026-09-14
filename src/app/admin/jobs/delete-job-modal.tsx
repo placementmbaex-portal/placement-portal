@@ -64,7 +64,7 @@ export function DeleteJobModal({
               </span>
             </div>
             <div className="flex justify-between">
-              <span className="text-[13.5px] text-ink">Unlink calendar events</span>
+              <span className="text-[13.5px] text-ink">Delete calendar events</span>
               <span className="font-body text-[13.5px] font-semibold tabular-nums text-closing">
                 {impact.events}
               </span>

@@ -240,9 +240,9 @@ export async function deleteJob(
     .eq("id", jobId)
     .single();
 
-  // Applications (and their status history) cascade on delete; announcements
-  // and events referencing this job have their job_id set to null rather
-  // than being removed, per the FKs in schema.sql.
+  // Applications (and their status history) cascade on delete, and so do
+  // events referencing this job -- but announcements referencing it only
+  // have their job_id set to null, not removed. Per the FKs in schema.sql.
   const { error } = await supabase.from("jobs").delete().eq("id", jobId);
   if (error) {
     return { error: "Could not delete the role. Please try again." };
