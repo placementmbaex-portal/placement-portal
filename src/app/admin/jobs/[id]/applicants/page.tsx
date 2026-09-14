@@ -78,7 +78,10 @@ export default async function JobApplicantsPage({
 
   return (
     <main className="flex flex-col gap-5">
-      <Link href="/admin/jobs" className="font-body text-[12.5px] font-medium text-navy">
+      <Link
+        href="/admin/jobs"
+        className="flex h-11 items-center font-body text-[12.5px] font-medium text-navy sm:h-auto"
+      >
         ← Jobs
       </Link>
 
@@ -98,16 +101,16 @@ export default async function JobApplicantsPage({
               .join(" · ")}
           </p>
         </div>
-        <div className="flex gap-2.5">
+        <div className="flex w-full gap-2.5 sm:w-auto">
           <a
             href={`/admin/jobs/${job.id}/applicants/cvs`}
-            className="flex h-10 items-center rounded-md border border-navy px-4 font-body text-[13.5px] font-semibold text-navy"
+            className="flex h-11 flex-1 items-center justify-center rounded-md border border-navy px-4 font-body text-[13.5px] font-semibold text-navy sm:h-10 sm:flex-none sm:justify-start"
           >
             Download all CVs (.zip)
           </a>
           <a
             href={`/admin/jobs/${job.id}/applicants/export`}
-            className="flex h-10 items-center rounded-md border border-navy px-4 font-body text-[13.5px] font-semibold text-navy"
+            className="flex h-11 flex-1 items-center justify-center rounded-md border border-navy px-4 font-body text-[13.5px] font-semibold text-navy sm:h-10 sm:flex-none sm:justify-start"
           >
             Export as Excel
           </a>

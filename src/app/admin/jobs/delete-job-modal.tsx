@@ -88,7 +88,7 @@ export function DeleteJobModal({
               <button
                 type="submit"
                 onClick={() => dialogRef.current?.close()}
-                className="flex h-9 shrink-0 items-center rounded-md border border-navy px-3.5 font-body text-[13px] font-semibold text-navy"
+                className="flex h-11 shrink-0 items-center rounded-md border border-navy px-3.5 font-body text-[13px] font-semibold text-navy sm:h-9"
               >
                 Close role
               </button>
@@ -115,14 +115,14 @@ export function DeleteJobModal({
               <button
                 type="button"
                 onClick={() => dialogRef.current?.close()}
-                className="text-[14px] text-slate hover:underline"
+                className="flex h-11 items-center text-[14px] text-slate hover:underline sm:h-auto"
               >
                 Cancel
               </button>
               <button
                 type="submit"
                 disabled={!canDelete || pending}
-                className="flex h-10 items-center rounded-md bg-closing px-4.5 font-body text-[14px] font-semibold text-white disabled:bg-[#ECEFF3] disabled:text-shut"
+                className="flex h-11 items-center rounded-md bg-closing px-4.5 font-body text-[14px] font-semibold text-white disabled:bg-[#ECEFF3] disabled:text-shut sm:h-10"
               >
                 {pending ? "Deleting…" : `Delete role and ${impact.applications} applications`}
               </button>

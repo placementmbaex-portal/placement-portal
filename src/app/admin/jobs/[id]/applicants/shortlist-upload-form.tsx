@@ -92,7 +92,7 @@ export function ShortlistUploadForm({ jobId }: { jobId: string }) {
           <button
             type="submit"
             disabled={confirmPending || matched.length === 0}
-            className="flex h-10 items-center rounded-md bg-navy px-4 text-[15px] font-medium text-white hover:bg-navy/90 disabled:opacity-60 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
+            className="flex h-11 items-center rounded-md bg-navy px-4 text-[15px] font-medium text-white hover:bg-navy/90 disabled:opacity-60 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink sm:h-10"
           >
             {confirmPending
               ? "Marking…"
@@ -101,7 +101,7 @@ export function ShortlistUploadForm({ jobId }: { jobId: string }) {
           <button
             type="button"
             onClick={() => setDismissed(true)}
-            className="text-[15px] text-slate hover:underline"
+            className="flex h-11 items-center text-[15px] text-slate hover:underline sm:h-auto"
           >
             Cancel
           </button>
@@ -154,7 +154,7 @@ export function ShortlistUploadForm({ jobId }: { jobId: string }) {
       <button
         type="submit"
         disabled={previewPending}
-        className="flex h-10 items-center rounded-md border border-navy px-4 text-[15px] font-medium text-navy hover:bg-surface disabled:opacity-60 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
+        className="flex h-11 items-center rounded-md border border-navy px-4 text-[15px] font-medium text-navy hover:bg-surface disabled:opacity-60 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink sm:h-10"
       >
         {previewPending ? "Matching…" : "Preview"}
       </button>

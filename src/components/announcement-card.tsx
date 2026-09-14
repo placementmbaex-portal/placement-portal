@@ -87,7 +87,7 @@ export function AnnouncementCard({
           {announcement.company && (
             <Link
               href={`/companies/${announcement.company.id}`}
-              className="text-navy hover:underline"
+              className="inline-block -my-3 py-3 text-navy hover:underline"
             >
               {announcement.company.name}
             </Link>
@@ -98,7 +98,7 @@ export function AnnouncementCard({
           {announcement.job && (
             <Link
               href={`/jobs/${announcement.job.id}`}
-              className="text-navy hover:underline"
+              className="inline-block -my-3 py-3 text-navy hover:underline"
             >
               {announcement.job.title}
             </Link>
@@ -118,7 +118,7 @@ export function AnnouncementCard({
             <button
               type="submit"
               formTarget="_blank"
-              className="font-medium text-navy hover:underline"
+              className="flex h-11 items-center font-medium text-navy hover:underline"
             >
               View attachment
             </button>
@@ -127,7 +127,7 @@ export function AnnouncementCard({
         <button
           type="button"
           onClick={() => setExpanded((v) => !v)}
-          className="text-slate hover:underline"
+          className="flex h-11 items-center text-slate hover:underline"
         >
           {comments.length === 0
             ? "Add a comment"
@@ -208,12 +208,12 @@ function CommentRow({
         {comment.body}
       </p>
       {(canReply || canDelete) && (
-        <div className="mt-1 flex gap-4 text-[13.5px]">
+        <div className="mt-1 flex items-center gap-4 text-[13.5px]">
           {canReply && onReply && (
             <button
               type="button"
               onClick={onReply}
-              className="text-slate hover:underline"
+              className="flex h-11 items-center text-slate hover:underline"
             >
               Reply
             </button>
@@ -223,7 +223,7 @@ function CommentRow({
               <ConfirmSubmitButton
                 confirmMessage="Delete this comment? This cannot be undone."
                 pendingLabel="Deleting…"
-                className="text-closing underline underline-offset-2 disabled:opacity-60"
+                className="flex h-11 items-center text-closing underline underline-offset-2 disabled:opacity-60"
               >
                 Delete
               </ConfirmSubmitButton>

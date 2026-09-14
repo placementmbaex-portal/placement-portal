@@ -51,14 +51,14 @@ export function RejectDialog({ announcementId }: { announcementId: string }) {
             <button
               type="button"
               onClick={() => dialogRef.current?.close()}
-              className="text-[15px] text-slate hover:underline"
+              className="flex h-11 items-center text-[15px] text-slate hover:underline sm:h-auto"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={pending}
-              className="flex h-10 items-center rounded-md bg-navy px-4 text-[15px] font-medium text-white hover:bg-navy/90 disabled:opacity-60 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
+              className="flex h-11 items-center rounded-md bg-navy px-4 text-[15px] font-medium text-white hover:bg-navy/90 disabled:opacity-60 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink sm:h-10"
             >
               {pending ? "Rejecting…" : "Reject with this reason"}
             </button>

@@ -252,7 +252,7 @@ export function ApplicantsTable({
                     <button
                       type="submit"
                       formTarget="_blank"
-                      className="font-body text-[12.5px] font-medium text-navy underline underline-offset-2"
+                      className="flex h-11 items-center font-body text-[12.5px] font-medium text-navy underline underline-offset-2"
                     >
                       {application.cv.label}
                     </button>
