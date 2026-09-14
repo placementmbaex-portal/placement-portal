@@ -5,6 +5,7 @@ import {
   getDeadlineUrgency,
   type DeadlineUrgency,
 } from "@/lib/format";
+import { CompanyLogo } from "@/components/company-logo";
 
 type JobCardJob = {
   id: string;
@@ -29,12 +30,14 @@ const RULE_COLOR: Record<DeadlineUrgency, string> = {
 export function JobCard({
   job,
   companyName,
+  companyLogoUrl,
   applied,
   hideCompany = false,
   showApplyButton = false,
 }: {
   job: JobCardJob;
   companyName?: string | null;
+  companyLogoUrl?: string | null;
   applied: boolean;
   hideCompany?: boolean;
   showApplyButton?: boolean;
@@ -57,12 +60,12 @@ export function JobCard({
 
   return (
     <div
-      className={`relative rounded-[14px] border border-rule bg-surface p-4 shadow-[0_1px_3px_rgba(22,32,46,0.08)] ${RULE_COLOR[urgency]} border-l-[3px] ${closed ? "opacity-60" : ""}`}
+      className={`relative rounded-[14px] border border-rule bg-surface p-4 shadow-[0_1px_3px_rgba(22,32,46,0.08)] transition-colors hover:border-slate ${RULE_COLOR[urgency]} border-l-[3px] ${closed ? "opacity-60" : ""}`}
     >
       <div className="flex items-start gap-3">
-        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-rule bg-paper font-body text-[13px] font-semibold text-slate">
-          {(companyName ?? job.title ?? "?").trim().slice(0, 2).toUpperCase()}
-        </div>
+        {!hideCompany && (
+          <CompanyLogo name={companyName} logoUrl={companyLogoUrl} size="sm" />
+        )}
         <div className="min-w-0 flex-1">
           <p className="truncate font-display text-[17px] leading-[1.35] font-semibold text-ink">
             <Link href={href} className="static after:absolute after:inset-0">

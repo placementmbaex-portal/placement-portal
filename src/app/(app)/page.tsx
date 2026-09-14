@@ -21,7 +21,7 @@ type OpenJob = {
   location: string | null;
   deadline: string | null;
   min_experience_years: number | null;
-  company: { id: string; name: string } | null;
+  company: { id: string; name: string; logo_url: string | null } | null;
 };
 
 type PinnedAnnouncement = {
@@ -70,7 +70,7 @@ export default async function DashboardPage() {
     supabase
       .from("jobs")
       .select(
-        "id, title, location, deadline, min_experience_years, company:companies(id, name)",
+        "id, title, location, deadline, min_experience_years, company:companies(id, name, logo_url)",
       )
       .eq("is_open", true)
       .order("deadline", { ascending: true, nullsFirst: false })
@@ -209,6 +209,7 @@ export default async function DashboardPage() {
                 key={job.id}
                 job={job}
                 companyName={job.company?.name}
+                companyLogoUrl={job.company?.logo_url}
                 applied={appliedJobIds.has(job.id)}
               />
             ))}

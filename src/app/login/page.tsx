@@ -19,7 +19,7 @@ export default async function LoginPage({
           height={64}
           className="mx-auto h-16 w-16 object-contain"
         />
-        <p className="mt-7 font-body text-[26px] font-bold tracking-[-0.015em] text-navy">
+        <p className="mt-8 font-body text-[40px] font-bold tracking-[-0.015em] text-navy">
           MBA<span className="text-flame">Ex</span>
         </p>
         <p className="mt-1 font-body text-[13px] uppercase tracking-[0.16em] text-slate">
