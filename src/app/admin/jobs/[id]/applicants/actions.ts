@@ -16,7 +16,10 @@ export async function viewApplicantCv(
     .from("cvs")
     .createSignedUrl(filePath, 60);
 
-  if (error || !data) redirect(`/admin/jobs/${jobId}/applicants`);
+  if (error || !data) {
+    console.error("viewApplicantCv: createSignedUrl failed", error);
+    redirect(`/admin/jobs/${jobId}/applicants`);
+  }
 
   redirect(data.signedUrl);
 }
@@ -57,7 +60,8 @@ export async function bulkUpdateStatus(
     .in("id", applicationIds);
 
   if (error) {
-    return { error: "Could not update status. Please try again." };
+    console.error("bulkUpdateStatus: applications update failed", error);
+    return { error: `Could not update status: ${error.message}` };
   }
 
   revalidatePath(`/admin/jobs/${jobId}/applicants`);
@@ -190,7 +194,8 @@ export async function confirmShortlist(
     .select("student_id");
 
   if (error) {
-    return { error: "Could not update status. Please try again." };
+    console.error("confirmShortlist: applications update failed", error);
+    return { error: `Could not update status: ${error.message}` };
   }
 
   if (updated && updated.length > 0) {
@@ -204,7 +209,7 @@ export async function confirmShortlist(
     // in-app panel / email delivery has something to read -- this task
     // doesn't build that delivery UI, only the "fires once per student"
     // half of the criterion.
-    await supabase.from("notifications").insert(
+    const { error: notifyError } = await supabase.from("notifications").insert(
       updated.map((row) => ({
         user_id: row.student_id,
         type: "application_status_changed",
@@ -215,6 +220,9 @@ export async function confirmShortlist(
         link: `/jobs/${jobId}`,
       })),
     );
+    if (notifyError) {
+      console.error("confirmShortlist: notifications insert failed", notifyError);
+    }
   }
 
   revalidatePath(`/admin/jobs/${jobId}/applicants`);

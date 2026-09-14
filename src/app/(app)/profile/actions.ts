@@ -28,7 +28,8 @@ export async function updateProfile(
     .eq("id", user.id);
 
   if (error) {
-    return { error: "Could not save your changes. Please try again." };
+    console.error("updateProfile: students update failed", error);
+    return { error: `Could not save your changes: ${error.message}` };
   }
 
   revalidatePath("/profile");
@@ -81,7 +82,8 @@ export async function uploadCv(
     .upload(path, file, { contentType: "application/pdf" });
 
   if (uploadError) {
-    return { error: "Upload failed. Please try again." };
+    console.error("uploadCv: storage upload failed", uploadError);
+    return { error: `Upload failed: ${uploadError.message}` };
   }
 
   const { error: insertError } = await supabase.from("cvs").insert({
@@ -91,8 +93,9 @@ export async function uploadCv(
   });
 
   if (insertError) {
+    console.error("uploadCv: cvs insert failed", insertError);
     await supabase.storage.from("cvs").remove([path]);
-    return { error: "Could not save the CV. Please try again." };
+    return { error: `Could not save the CV: ${insertError.message}` };
   }
 
   revalidatePath("/profile");
@@ -115,8 +118,20 @@ export async function deleteCv(cvId: string, _formData: FormData) {
 
   if (!cv) return;
 
-  await supabase.storage.from("cvs").remove([cv.file_path]);
-  await supabase.from("cvs").delete().eq("id", cvId);
+  const { error: removeError } = await supabase.storage
+    .from("cvs")
+    .remove([cv.file_path]);
+  if (removeError) {
+    console.error("deleteCv: storage remove failed", removeError);
+  }
+
+  const { error: deleteError } = await supabase
+    .from("cvs")
+    .delete()
+    .eq("id", cvId);
+  if (deleteError) {
+    console.error("deleteCv: cvs delete failed", deleteError);
+  }
 
   revalidatePath("/profile");
 }
@@ -141,7 +156,10 @@ export async function viewCv(cvId: string, _formData: FormData) {
     .from("cvs")
     .createSignedUrl(cv.file_path, 60);
 
-  if (error || !data) redirect("/profile");
+  if (error || !data) {
+    console.error("viewCv: createSignedUrl failed", error);
+    redirect("/profile");
+  }
 
   redirect(data.signedUrl);
 }

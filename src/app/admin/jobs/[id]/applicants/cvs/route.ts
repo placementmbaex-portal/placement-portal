@@ -67,8 +67,9 @@ export async function GET(
   >();
 
   if (error) {
+    console.error("GET /applicants/cvs: applications select failed", error);
     return NextResponse.json(
-      { error: "Could not read applicants." },
+      { error: `Could not read applicants: ${error.message}` },
       { status: 500 },
     );
   }
@@ -89,7 +90,10 @@ export async function GET(
     const { data: file, error: downloadError } = await serviceClient.storage
       .from("cvs")
       .download(cvPath);
-    if (downloadError || !file) continue;
+    if (downloadError || !file) {
+      console.error(`GET /applicants/cvs: download failed for ${cvPath}`, downloadError);
+      continue;
+    }
 
     const rollNo = row.student?.roll_no || "NoRollNo";
     const name = row.student?.name || "Unnamed";

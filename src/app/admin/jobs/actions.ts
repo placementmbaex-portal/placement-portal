@@ -98,7 +98,8 @@ export async function createJob(
       .from("jds")
       .upload(jdPath, jdFile, { contentType: "application/pdf" });
     if (uploadError) {
-      return { error: "Could not upload the JD. Please try again." };
+      console.error("createJob: jds upload failed", uploadError);
+      return { error: `Could not upload the JD: ${uploadError.message}` };
     }
   }
 
@@ -114,8 +115,9 @@ export async function createJob(
   });
 
   if (error) {
+    console.error("createJob: jobs insert failed", error);
     if (jdPath) await supabase.storage.from("jds").remove([jdPath]);
-    return { error: "Could not create the job. Please try again." };
+    return { error: `Could not create the job: ${error.message}` };
   }
 
   revalidatePath("/admin/jobs");
@@ -174,7 +176,8 @@ export async function updateJob(
       .from("jds")
       .upload(newJdPath, jdFile, { contentType: "application/pdf" });
     if (uploadError) {
-      return { error: "Could not upload the JD. Please try again." };
+      console.error("updateJob: jds upload failed", uploadError);
+      return { error: `Could not upload the JD: ${uploadError.message}` };
     }
     update.jd_path = newJdPath;
   }
@@ -191,8 +194,9 @@ export async function updateJob(
     .eq("id", jobId);
 
   if (error) {
+    console.error("updateJob: jobs update failed", error);
     if (newJdPath) await supabase.storage.from("jds").remove([newJdPath]);
-    return { error: "Could not save changes. Please try again." };
+    return { error: `Could not save changes: ${error.message}` };
   }
 
   if (newJdPath && existingJob?.jd_path) {
@@ -212,7 +216,13 @@ export async function toggleJobOpen(
 ) {
   const { supabase } = await requireAdmin();
 
-  await supabase.from("jobs").update({ is_open: nextIsOpen }).eq("id", jobId);
+  const { error } = await supabase
+    .from("jobs")
+    .update({ is_open: nextIsOpen })
+    .eq("id", jobId);
+  if (error) {
+    console.error("toggleJobOpen: jobs update failed", error);
+  }
 
   revalidatePath("/admin/jobs");
   revalidatePath("/");
@@ -245,7 +255,8 @@ export async function deleteJob(
   // have their job_id set to null, not removed. Per the FKs in schema.sql.
   const { error } = await supabase.from("jobs").delete().eq("id", jobId);
   if (error) {
-    return { error: "Could not delete the role. Please try again." };
+    console.error("deleteJob: jobs delete failed", error);
+    return { error: `Could not delete the role: ${error.message}` };
   }
 
   if (job?.jd_path) {

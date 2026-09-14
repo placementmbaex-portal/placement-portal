@@ -38,7 +38,8 @@ export async function createCompany(
 
   const { error } = await supabase.from("companies").insert(values);
   if (error) {
-    return { error: "Could not create the company. Please try again." };
+    console.error("createCompany: companies insert failed", error);
+    return { error: `Could not create the company: ${error.message}` };
   }
 
   revalidatePath("/admin/companies");
@@ -60,7 +61,8 @@ export async function updateCompany(
     .update(values)
     .eq("id", companyId);
   if (error) {
-    return { error: "Could not save changes. Please try again." };
+    console.error("updateCompany: companies update failed", error);
+    return { error: `Could not save changes: ${error.message}` };
   }
 
   revalidatePath("/admin/companies");

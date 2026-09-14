@@ -47,7 +47,8 @@ export async function createAnnouncement(
       .from("announcements")
       .upload(attachmentPath, file, { contentType: "application/pdf" });
     if (uploadError) {
-      return { error: "Could not upload the attachment. Please try again." };
+      console.error("createAnnouncement: attachment upload failed", uploadError);
+      return { error: `Could not upload the attachment: ${uploadError.message}` };
     }
   }
 
@@ -65,12 +66,13 @@ export async function createAnnouncement(
   });
 
   if (error) {
+    console.error("createAnnouncement: announcements insert failed", error);
     if (attachmentPath) {
       await supabase.storage
         .from("announcements")
         .remove([attachmentPath]);
     }
-    return { error: "Could not submit the announcement. Please try again." };
+    return { error: `Could not submit the announcement: ${error.message}` };
   }
 
   revalidatePath("/");
@@ -106,6 +108,7 @@ export async function addComment(
 
   if (error) {
     // Surfaces guard_comment's own message (locked, unpublished) verbatim.
+    console.error("addComment: comments insert failed", error);
     return { error: error.message };
   }
 
@@ -120,7 +123,10 @@ export async function deleteComment(commentId: string, _formData: FormData) {
   } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
-  await supabase.from("comments").delete().eq("id", commentId);
+  const { error } = await supabase.from("comments").delete().eq("id", commentId);
+  if (error) {
+    console.error("deleteComment: comments delete failed", error);
+  }
   revalidatePath("/");
 }
 
@@ -139,7 +145,10 @@ export async function viewAnnouncementAttachment(
     .from("announcements")
     .createSignedUrl(path, 60);
 
-  if (error || !data) redirect(`/#announcement-${announcementId}`);
+  if (error || !data) {
+    console.error("viewAnnouncementAttachment: createSignedUrl failed", error);
+    redirect(`/#announcement-${announcementId}`);
+  }
 
   redirect(data.signedUrl);
 }

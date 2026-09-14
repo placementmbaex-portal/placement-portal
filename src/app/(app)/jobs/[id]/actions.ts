@@ -34,6 +34,7 @@ export async function applyToJob(
     }
     // Surfaces the guard_application trigger's own message (closed job,
     // deadline passed, experience shortfall) verbatim.
+    console.error("applyToJob: applications insert failed", error);
     return { error: error.message };
   }
 
@@ -73,7 +74,13 @@ export async function withdrawApplication(
     return;
   }
 
-  await supabase.from("applications").delete().eq("id", applicationId);
+  const { error } = await supabase
+    .from("applications")
+    .delete()
+    .eq("id", applicationId);
+  if (error) {
+    console.error("withdrawApplication: applications delete failed", error);
+  }
 
   revalidatePath(`/jobs/${application.job_id}`);
   revalidatePath("/");
@@ -95,7 +102,10 @@ export async function viewJd(
     .from("jds")
     .createSignedUrl(jdPath, 60);
 
-  if (error || !data) redirect(`/jobs/${jobId}`);
+  if (error || !data) {
+    console.error("viewJd: createSignedUrl failed", error);
+    redirect(`/jobs/${jobId}`);
+  }
 
   redirect(data.signedUrl);
 }

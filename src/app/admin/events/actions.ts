@@ -63,7 +63,8 @@ export async function createEvent(
   });
 
   if (error) {
-    return { error: "Could not create the event. Please try again." };
+    console.error("createEvent: events insert failed", error);
+    return { error: `Could not create the event: ${error.message}` };
   }
 
   revalidatePath("/calendar");

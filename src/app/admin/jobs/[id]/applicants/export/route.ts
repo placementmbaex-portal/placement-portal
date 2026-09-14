@@ -44,8 +44,9 @@ export async function GET(
     .order("applied_at", { ascending: true });
 
   if (error) {
+    console.error("GET /applicants/export: application_export select failed", error);
     return NextResponse.json(
-      { error: "Could not read applicants." },
+      { error: `Could not read applicants: ${error.message}` },
       { status: 500 },
     );
   }

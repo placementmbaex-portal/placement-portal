@@ -13,6 +13,8 @@ export async function GET(request: Request) {
       return NextResponse.redirect(`${origin}/`);
     }
 
+    console.error("auth/callback: exchangeCodeForSession failed", error);
+
     // GoTrue wraps the `handle_new_user` trigger's rejection (email not on
     // the allowlist) in a generic "Database error saving new user" message.
     // Surface our own explanation instead of that generic one.
@@ -25,7 +27,11 @@ export async function GET(request: Request) {
     );
   }
 
+  console.error("auth/callback: no ?code param on callback request", {
+    url: request.url,
+  });
+
   return NextResponse.redirect(
-    `${origin}/login?error=${encodeURIComponent("Something went wrong signing you in. Please try again.")}`,
+    `${origin}/login?error=${encodeURIComponent("Sign-in was cancelled or the link had no authorization code.")}`,
   );
 }

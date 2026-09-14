@@ -15,6 +15,7 @@ export async function approveAnnouncement(id: string, formData: FormData) {
     .eq("id", id);
 
   if (error) {
+    console.error("approveAnnouncement: announcements update failed", error);
     redirect(`/admin/announcements?error=${encodeURIComponent(error.message)}`);
   }
 
@@ -40,7 +41,10 @@ export async function rejectAnnouncement(
     .update({ status: "rejected", rejection_reason: reason })
     .eq("id", id);
 
-  if (error) return { error: error.message };
+  if (error) {
+    console.error("rejectAnnouncement: announcements update failed", error);
+    return { error: error.message };
+  }
 
   revalidatePath("/admin/announcements");
   revalidatePath("/");
@@ -65,6 +69,7 @@ export async function togglePin(
     .eq("id", id);
 
   if (error) {
+    console.error("togglePin: announcements update failed", error);
     redirect(`/admin/announcements?error=${encodeURIComponent(error.message)}`);
   }
 
@@ -80,10 +85,13 @@ export async function toggleCommentsLocked(
 ) {
   const { supabase } = await requireAdmin();
 
-  await supabase
+  const { error } = await supabase
     .from("announcements")
     .update({ comments_locked: nextLocked })
     .eq("id", id);
+  if (error) {
+    console.error("toggleCommentsLocked: announcements update failed", error);
+  }
 
   revalidatePath("/admin/announcements");
   revalidatePath("/");
