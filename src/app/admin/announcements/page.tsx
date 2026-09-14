@@ -73,7 +73,7 @@ export default async function AdminAnnouncementsPage({
         </div>
         <Link
           href="/admin/announcements/new"
-          className="flex h-11 w-full items-center justify-center rounded-lg bg-navy px-4.5 font-body text-[14px] font-semibold text-white sm:h-10 sm:w-auto sm:justify-start"
+          className="flex h-11 w-full items-center justify-center rounded-lg bg-navy px-4.5 font-body text-[14px] font-semibold text-white sm:h-10 sm:w-auto sm:justify-start focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
         >
           Post an announcement
         </Link>
@@ -94,8 +94,8 @@ export default async function AdminAnnouncementsPage({
               href={tab.key === "pending" ? "/admin/announcements" : `/admin/announcements?status=${tab.key}`}
               className={`flex h-11 items-center rounded-lg px-3.5 font-body text-[12.5px] sm:h-[34px] ${
                 active
-                  ? "bg-ink font-semibold text-white"
-                  : "border border-rule bg-surface font-medium text-ink"
+                  ? "bg-ink font-semibold text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
+                  : "border border-rule bg-surface font-medium text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
               }`}
             >
               {tab.label} {byTab[tab.key].length}
@@ -145,7 +145,7 @@ export default async function AdminAnnouncementsPage({
                   </label>
                   <button
                     type="submit"
-                    className="flex h-11 items-center justify-center rounded-md bg-navy font-body text-[13.5px] font-semibold text-white sm:h-10"
+                    className="flex h-11 items-center justify-center rounded-md bg-navy font-body text-[13.5px] font-semibold text-white sm:h-10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
                   >
                     Approve and publish
                   </button>
@@ -192,7 +192,10 @@ export default async function AdminAnnouncementsPage({
                             className="inline"
                             action={togglePin.bind(null, announcement.id, !announcement.is_pinned)}
                           >
-                            <button type="submit" className="text-navy hover:underline">
+                            <button
+                              type="submit"
+                              className="text-navy hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
+                            >
                               {announcement.is_pinned ? "Unpin" : "Pin"}
                             </button>
                           </form>
@@ -205,7 +208,10 @@ export default async function AdminAnnouncementsPage({
                               !announcement.comments_locked,
                             )}
                           >
-                            <button type="submit" className="text-navy hover:underline">
+                            <button
+                              type="submit"
+                              className="text-navy hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
+                            >
                               {announcement.comments_locked ? "Unlock comments" : "Lock comments"}
                             </button>
                           </form>
@@ -242,7 +248,7 @@ export default async function AdminAnnouncementsPage({
                     <form action={togglePin.bind(null, announcement.id, !announcement.is_pinned)}>
                       <button
                         type="submit"
-                        className="flex h-11 items-center font-body text-[13px] font-medium text-navy"
+                        className="flex h-11 items-center font-body text-[13px] font-medium text-navy focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
                       >
                         {announcement.is_pinned ? "Unpin" : "Pin"}
                       </button>
@@ -256,7 +262,7 @@ export default async function AdminAnnouncementsPage({
                     >
                       <button
                         type="submit"
-                        className="flex h-11 items-center font-body text-[13px] font-medium text-navy"
+                        className="flex h-11 items-center font-body text-[13px] font-medium text-navy focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
                       >
                         {announcement.comments_locked ? "Unlock comments" : "Lock comments"}
                       </button>

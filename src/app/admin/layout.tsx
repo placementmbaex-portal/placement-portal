@@ -65,7 +65,7 @@ export default async function AdminLayout({
           <span className="flex-1" />
           <Link
             href="/admin/announcements"
-            className="flex h-11 shrink-0 items-center rounded-lg bg-white/14 px-2.5 font-body text-[12.5px] font-medium whitespace-nowrap text-white sm:h-8 sm:px-3"
+            className="flex h-11 shrink-0 items-center rounded-lg bg-white/14 px-2.5 font-body text-[12.5px] font-medium whitespace-nowrap text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white sm:h-8 sm:px-3"
           >
             <span className="sm:hidden">{pendingCount} pending</span>
             <span className="hidden sm:inline">

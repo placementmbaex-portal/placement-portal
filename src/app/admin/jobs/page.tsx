@@ -104,7 +104,7 @@ export default async function AdminJobsPage({
         </div>
         <Link
           href="/admin/jobs/new"
-          className="flex h-11 items-center rounded-lg bg-navy px-4.5 font-body text-[14px] font-semibold text-white sm:h-10"
+          className="flex h-11 items-center rounded-lg bg-navy px-4.5 font-body text-[14px] font-semibold text-white sm:h-10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
         >
           Create a role
         </Link>
@@ -119,8 +119,8 @@ export default async function AdminJobsPage({
               href={f.key === "all" ? "/admin/jobs" : `/admin/jobs?filter=${f.key}`}
               className={`flex h-11 items-center rounded-lg px-3.5 font-body text-[12.5px] sm:h-[34px] ${
                 active
-                  ? "bg-ink font-semibold text-white"
-                  : "border border-rule bg-surface font-medium text-ink"
+                  ? "bg-ink font-semibold text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
+                  : "border border-rule bg-surface font-medium text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
               }`}
             >
               {f.label} {f.count}
@@ -133,6 +133,7 @@ export default async function AdminJobsPage({
           name="q"
           defaultValue={q ?? ""}
           placeholder="Search company or title…"
+          aria-label="Search company or title"
           className="h-11 w-full rounded-lg border border-rule px-3 text-[12.5px] text-ink focus:outline-2 focus:outline-offset-2 focus:outline-ink sm:h-[34px] sm:w-[220px]"
         />
         {filter !== "all" && <input type="hidden" name="filter" value={filter} />}
@@ -191,16 +192,25 @@ export default async function AdminJobsPage({
                         </span>
                       </td>
                       <td className="px-4 text-right tabular-nums">
-                        <Link href={`/admin/jobs/${job.id}/applicants`} className="text-navy">
+                        <Link
+                          href={`/admin/jobs/${job.id}/applicants`}
+                          className="text-navy focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
+                        >
                           {applicantCounts.get(job.id) ?? 0}
                         </Link>
                       </td>
                       <td className="px-4 text-right whitespace-nowrap">
-                        <Link href={`/admin/jobs/${job.id}/applicants`} className="text-navy">
+                        <Link
+                          href={`/admin/jobs/${job.id}/applicants`}
+                          className="text-navy focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
+                        >
                           Applicants
                         </Link>
                         <span className="mx-2 text-rule">|</span>
-                        <Link href={`/admin/jobs/${job.id}/edit`} className="text-navy">
+                        <Link
+                          href={`/admin/jobs/${job.id}/edit`}
+                          className="text-navy focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
+                        >
                           Edit
                         </Link>
                         <span className="mx-2 text-rule">|</span>
@@ -267,14 +277,14 @@ export default async function AdminJobsPage({
                     <div className="mt-2 flex items-center justify-between">
                       <Link
                         href={`/admin/jobs/${job.id}/applicants`}
-                        className="flex h-11 items-center font-body text-[13px] font-medium text-navy"
+                        className="flex h-11 items-center font-body text-[13px] font-medium text-navy focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
                       >
                         {applicantCount} applicant{applicantCount === 1 ? "" : "s"}
                       </Link>
                       <div className="flex items-center gap-1">
                         <Link
                           href={`/admin/jobs/${job.id}/edit`}
-                          className="flex h-11 items-center px-2 font-body text-[13px] font-medium text-navy"
+                          className="flex h-11 items-center px-2 font-body text-[13px] font-medium text-navy focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
                         >
                           Edit
                         </Link>

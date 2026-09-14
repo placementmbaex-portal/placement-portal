@@ -24,7 +24,7 @@ export function ApplyDialog({
       <button
         type="button"
         onClick={() => dialogRef.current?.showModal()}
-        className="flex h-11 items-center justify-center rounded-lg bg-navy px-4 font-body text-[15px] font-semibold text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
+        className="flex h-11 items-center justify-center rounded-lg bg-navy px-4 font-body text-[15px] font-semibold text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
       >
         Apply
       </button>
@@ -46,7 +46,7 @@ export function ApplyDialog({
             {cvs.map((cv, index) => (
               <label
                 key={cv.id}
-                className="flex items-center gap-3 rounded-[10px] border border-rule p-3.5 has-[:checked]:border-2 has-[:checked]:border-navy has-[:checked]:bg-[#F5F8FB] has-[:checked]:p-[13px]"
+                className="flex items-center gap-3 rounded-[10px] border border-rule p-3.5 has-[:checked]:border-2 has-[:checked]:border-navy has-[:checked]:bg-[#F5F8FB] has-[:checked]:p-[13px] has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-ink"
               >
                 <input
                   type="radio"
@@ -78,14 +78,14 @@ export function ApplyDialog({
           <button
             type="submit"
             disabled={pending}
-            className="mt-4 flex h-12 w-full items-center justify-center rounded-[10px] bg-navy font-body text-[15.5px] font-semibold text-white disabled:opacity-60"
+            className="mt-4 flex h-12 w-full items-center justify-center rounded-[10px] bg-navy font-body text-[15.5px] font-semibold text-white disabled:opacity-60 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
           >
             {pending ? "Applying…" : "Apply with this CV"}
           </button>
           <button
             type="button"
             onClick={() => dialogRef.current?.close()}
-            className="mt-1 flex h-11 w-full items-center justify-center font-body text-[14.5px] font-medium text-slate"
+            className="mt-1 flex h-11 w-full items-center justify-center font-body text-[14.5px] font-medium text-slate focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
           >
             Cancel
           </button>

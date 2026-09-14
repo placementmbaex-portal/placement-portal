@@ -161,7 +161,7 @@ export default async function DashboardPage() {
           </p>
           <Link
             href={`/jobs/${soonestNotApplied.id}`}
-            className="mt-3.5 flex h-11 items-center justify-center rounded-lg bg-navy font-body text-[15px] font-semibold text-white"
+            className="mt-3.5 flex h-11 items-center justify-center rounded-lg bg-navy font-body text-[15px] font-semibold text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
           >
             Apply now
           </Link>

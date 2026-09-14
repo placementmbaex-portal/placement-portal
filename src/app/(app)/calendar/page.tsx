@@ -290,7 +290,7 @@ export default async function CalendarPage({
                     {entry.type === "deadline" ? (
                       <Link
                         href={`/jobs/${entry.jobId}`}
-                        className="mt-3 flex h-10 items-center justify-center rounded-lg bg-navy font-body text-[14px] font-semibold text-white"
+                        className="mt-3 flex h-10 items-center justify-center rounded-lg bg-navy font-body text-[14px] font-semibold text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
                       >
                         Apply now
                       </Link>

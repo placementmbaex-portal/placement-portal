@@ -32,7 +32,7 @@ export default async function AdminCompaniesPage() {
         </div>
         <Link
           href="/admin/companies/new"
-          className="flex h-11 items-center rounded-lg bg-navy px-4.5 font-body text-[14px] font-semibold text-white sm:h-10"
+          className="flex h-11 items-center rounded-lg bg-navy px-4.5 font-body text-[14px] font-semibold text-white sm:h-10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
         >
           Add a company
         </Link>
@@ -67,7 +67,10 @@ export default async function AdminCompaniesPage() {
                       {company.is_legacy_recruiter ? "Yes" : "—"}
                     </td>
                     <td className="px-4 text-right">
-                      <Link href={`/admin/companies/${company.id}/edit`} className="text-navy">
+                      <Link
+                        href={`/admin/companies/${company.id}/edit`}
+                        className="text-navy focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
+                      >
                         Edit
                       </Link>
                     </td>
@@ -86,7 +89,7 @@ export default async function AdminCompaniesPage() {
                   </p>
                   <Link
                     href={`/admin/companies/${company.id}/edit`}
-                    className="-mr-2 -mt-1.5 flex h-11 shrink-0 items-center px-2 font-body text-[13px] font-medium text-navy"
+                    className="-mr-2 -mt-1.5 flex h-11 shrink-0 items-center px-2 font-body text-[13px] font-medium text-navy focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
                   >
                     Edit
                   </Link>

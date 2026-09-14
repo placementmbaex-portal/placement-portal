@@ -79,7 +79,7 @@ export function CvUploadForm({ slotsLeft }: { slotsLeft: number }) {
           whole panel is one large, obviously-tappable target. */}
       <label
         htmlFor="file"
-        className="flex cursor-pointer flex-col items-center gap-2 rounded-xl border-[1.5px] border-dashed border-navy bg-[#F5F8FB] py-[18px] px-3.5 text-center"
+        className="flex cursor-pointer flex-col items-center gap-2 rounded-xl border-[1.5px] border-dashed border-navy bg-[#F5F8FB] py-[18px] px-3.5 text-center has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-ink"
       >
         <span className="flex h-11 w-11 items-center justify-center rounded-full bg-navy">
           <svg
@@ -120,7 +120,7 @@ export function CvUploadForm({ slotsLeft }: { slotsLeft: number }) {
       <button
         type="submit"
         disabled={pending || !!clientError}
-        className="flex h-11 items-center justify-center rounded-lg bg-navy font-body text-[14.5px] font-semibold text-white disabled:opacity-60"
+        className="flex h-11 items-center justify-center rounded-lg bg-navy font-body text-[14.5px] font-semibold text-white disabled:opacity-60 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
       >
         {pending ? "Uploading…" : "Upload"}
       </button>

@@ -85,7 +85,7 @@ export function ApplicantsTable({
               name="status"
               value={status}
               onChange={(e) => setStatus(e.target.value)}
-              className="h-11 rounded-md border border-white/28 bg-white/14 px-2.5 font-body text-[12.5px] font-medium text-white sm:h-8"
+              className="h-11 rounded-md border border-white/28 bg-white/14 px-2.5 font-body text-[12.5px] font-medium text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white sm:h-8"
             >
               <option value="" className="text-ink">
                 Choose a status…
@@ -100,14 +100,14 @@ export function ApplicantsTable({
           <button
             type="submit"
             disabled={pending || !status}
-            className="flex h-11 items-center rounded-md bg-white px-3.5 font-body text-[12.5px] font-semibold text-ink disabled:opacity-60 sm:h-8"
+            className="flex h-11 items-center rounded-md bg-white px-3.5 font-body text-[12.5px] font-semibold text-ink disabled:opacity-60 sm:h-8 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
           >
             {pending ? "Applying…" : `Apply to ${selected.size}`}
           </button>
           <span className="flex-1" />
           <a
             href={`/admin/jobs/${jobId}/applicants/cvs?ids=${Array.from(selected).join(",")}`}
-            className="flex h-11 items-center gap-2 rounded-md bg-flame px-3.5 font-body text-[12.5px] font-semibold text-white sm:h-9"
+            className="flex h-11 items-center gap-2 rounded-md bg-flame px-3.5 font-body text-[12.5px] font-semibold text-white sm:h-9 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
           >
             Download {selected.size} CVs as .zip
           </a>

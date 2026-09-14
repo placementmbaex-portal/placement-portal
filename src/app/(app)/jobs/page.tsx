@@ -96,8 +96,8 @@ export default async function JobsPage({
               href={f.key === "all" ? "/jobs" : `/jobs?filter=${f.key}`}
               className={`flex h-[34px] items-center rounded-full px-3.5 font-body text-[13px] ${
                 filter === f.key
-                  ? "bg-navy font-semibold text-white"
-                  : "border border-rule bg-surface font-medium text-ink"
+                  ? "bg-navy font-semibold text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
+                  : "border border-rule bg-surface font-medium text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
               }`}
             >
               {f.label}

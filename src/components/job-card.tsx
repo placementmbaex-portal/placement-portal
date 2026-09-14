@@ -100,8 +100,8 @@ export function JobCard({
           href={href}
           className={`relative z-10 mt-3 flex h-[42px] items-center justify-center rounded-lg font-body text-[14.5px] font-semibold ${
             urgency === "urgent"
-              ? "bg-navy text-white"
-              : "border border-navy text-navy"
+              ? "bg-navy text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
+              : "border border-navy text-navy focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
           }`}
         >
           Apply

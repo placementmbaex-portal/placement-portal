@@ -29,7 +29,7 @@ export function AdminTabs({ pendingCount }: { pendingCount: number }) {
           <Link
             key={tab.href}
             href={tab.href}
-            className={`flex h-11 shrink-0 items-center gap-1.5 border-b-2 px-3.5 font-body text-[13px] whitespace-nowrap sm:h-10 ${
+            className={`flex h-11 shrink-0 items-center gap-1.5 border-b-2 px-3.5 font-body text-[13px] whitespace-nowrap focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white sm:h-10 ${
               active
                 ? "border-flame font-semibold text-white"
                 : "border-transparent font-medium text-white/72"

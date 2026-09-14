@@ -142,7 +142,7 @@ export default async function AnnouncementsPage() {
 
         <Link
           href="/announcements/new"
-          className="mt-4 flex h-11 items-center justify-center gap-2 rounded-lg bg-navy font-body text-[14.5px] font-semibold text-white"
+          className="mt-4 flex h-11 items-center justify-center gap-2 rounded-lg bg-navy font-body text-[14.5px] font-semibold text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
         >
           <svg
             width="17"

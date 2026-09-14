@@ -83,8 +83,8 @@ export default async function AdminStudentsPage({
               href={f.key === "all" ? "/admin/students" : `/admin/students?filter=${f.key}`}
               className={`flex h-11 items-center rounded-lg px-3.5 font-body text-[12.5px] sm:h-[34px] ${
                 active
-                  ? "bg-ink font-semibold text-white"
-                  : "border border-rule bg-surface font-medium text-ink"
+                  ? "bg-ink font-semibold text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
+                  : "border border-rule bg-surface font-medium text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
               }`}
             >
               {f.label} {f.count}
@@ -97,6 +97,7 @@ export default async function AdminStudentsPage({
           name="q"
           defaultValue={q ?? ""}
           placeholder="Search name or roll no…"
+          aria-label="Search name or roll no"
           className="h-11 w-full rounded-lg border border-rule px-3 text-[12.5px] text-ink focus:outline-2 focus:outline-offset-2 focus:outline-ink sm:h-[34px] sm:w-[200px]"
         />
         {filter !== "all" && <input type="hidden" name="filter" value={filter} />}

@@ -57,7 +57,7 @@ export function ProfileForm({
       <button
         type="submit"
         disabled={pending}
-        className="flex h-11 items-center justify-center rounded-lg bg-navy font-body text-[14.5px] font-semibold text-white disabled:opacity-60"
+        className="flex h-11 items-center justify-center rounded-lg bg-navy font-body text-[14.5px] font-semibold text-white disabled:opacity-60 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
       >
         {pending ? "Saving…" : "Save changes"}
       </button>

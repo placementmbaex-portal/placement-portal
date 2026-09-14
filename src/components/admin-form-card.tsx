@@ -30,14 +30,14 @@ export function AdminFormCard({
       <div className="flex items-center justify-end gap-4.5 border-t border-rule bg-paper px-5.5 py-4">
         <Link
           href={cancelHref}
-          className="flex h-11 items-center text-[14px] text-slate hover:underline sm:h-auto"
+          className="flex h-11 items-center text-[14px] text-slate hover:underline sm:h-auto focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
         >
           Cancel
         </Link>
         <button
           type="submit"
           disabled={pending}
-          className="flex h-11 items-center rounded-md bg-navy px-4.5 font-body text-[14px] font-semibold text-white disabled:opacity-60 sm:h-10"
+          className="flex h-11 items-center rounded-md bg-navy px-4.5 font-body text-[14px] font-semibold text-white disabled:opacity-60 sm:h-10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
         >
           {pending ? (pendingLabel ?? "Saving…") : submitLabel}
         </button>
