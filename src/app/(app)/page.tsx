@@ -174,7 +174,7 @@ export default async function DashboardPage() {
             <h2 className="font-display text-[17px] leading-[1.3] font-semibold text-ink">
               Pinned
             </h2>
-            <Link href="/announcements" className="text-[13px] text-navy">
+            <Link href="/announcements" className="-my-3 py-3 text-[13px] text-navy">
               All announcements
             </Link>
           </div>
@@ -194,7 +194,7 @@ export default async function DashboardPage() {
           <h2 className="font-display text-[17px] leading-[1.3] font-semibold text-ink">
             Open roles
           </h2>
-          <Link href="/jobs" className="text-[13px] text-navy">
+          <Link href="/jobs" className="-my-3 py-3 text-[13px] text-navy">
             See all {jobList.length}
           </Link>
         </div>
