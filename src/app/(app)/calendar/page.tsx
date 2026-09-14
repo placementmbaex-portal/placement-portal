@@ -240,7 +240,8 @@ export default async function CalendarPage({
       <div className="flex flex-col gap-2.5 rounded-2xl bg-scroll p-4">
         {weekEntryDates.length === 0 ? (
           <p className="text-[15px] leading-[1.55] text-slate">
-            Nothing on the calendar this week.
+            Nothing on the calendar this week. Deadlines and events appear
+            here as the committee schedules them.
           </p>
         ) : (
           weekEntryDates.map((day) => {

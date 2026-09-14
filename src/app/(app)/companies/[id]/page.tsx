@@ -81,7 +81,10 @@ export default async function CompanyPage({
       <section className="space-y-3">
         <h2 className="text-sm font-medium text-zinc-500">Open roles</h2>
         {jobList.length === 0 ? (
-          <p className="text-sm text-zinc-500">No open roles right now.</p>
+          <p className="text-sm text-zinc-500">
+            No open roles right now. New roles from this company appear here
+            once posted.
+          </p>
         ) : (
           <ul className="flex flex-col gap-2.5">
             {jobList.map((job) => (

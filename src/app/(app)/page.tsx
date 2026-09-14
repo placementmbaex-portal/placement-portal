@@ -200,7 +200,8 @@ export default async function DashboardPage() {
         </div>
         {jobList.length === 0 ? (
           <p className="mt-2.5 text-[15px] leading-[1.55] text-slate">
-            No open roles right now. New postings will appear here.
+            No open roles right now. New roles appear here as soon as the
+            committee posts one.
           </p>
         ) : (
           <div className="mt-2.5 flex flex-col gap-2">
@@ -223,7 +224,8 @@ export default async function DashboardPage() {
         </h2>
         {weekEntries.length === 0 ? (
           <p className="mt-2.5 text-[15px] leading-[1.55] text-slate">
-            Nothing on the calendar this week.
+            Nothing on the calendar this week. Deadlines and events appear
+            here as the committee schedules them.
           </p>
         ) : (
           <div className="mt-2.5 divide-y divide-rule overflow-hidden rounded-[14px] border border-rule bg-surface">

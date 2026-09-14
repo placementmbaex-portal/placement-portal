@@ -115,7 +115,10 @@ export default async function JobApplicantsPage({
       </div>
 
       {applicantList.length === 0 ? (
-        <p className="text-[14px] text-slate">No applicants yet.</p>
+        <p className="text-[14px] text-slate">
+          No applicants yet. This role&apos;s applicants appear here as
+          students apply.
+        </p>
       ) : (
         <ApplicantsTable jobId={job.id} applicants={applicantList} sort={sort} dir={dir} />
       )}

@@ -199,7 +199,7 @@ export default async function AnnouncementsPage() {
 
         {cards.length === 0 && (
           <p className="text-[15px] leading-[1.55] text-slate">
-            Nothing from the committee yet. Posts will appear here.
+            Nothing from the committee yet. Posts appear here once approved.
           </p>
         )}
 
