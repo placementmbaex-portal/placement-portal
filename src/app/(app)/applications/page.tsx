@@ -324,7 +324,7 @@ export default async function ApplicationsPage({
             )}
           </>
         )}
-        {hasFilter && filteredList.length > 0 && (
+        {hasFilter && (
           <Link href="/applications" className="self-start text-[13px] text-navy">
             Clear filters
           </Link>
