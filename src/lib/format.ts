@@ -14,6 +14,16 @@ export function formatDateIST(iso: string) {
   }).format(new Date(iso));
 }
 
+// Year dropped on purpose -- used only for compact status-history entries
+// ("Shortlisted, 12 Mar") where the year is implied by context.
+export function formatShortDateIST(iso: string) {
+  return new Intl.DateTimeFormat("en-IN", {
+    timeZone: "Asia/Kolkata",
+    day: "numeric",
+    month: "short",
+  }).format(new Date(iso));
+}
+
 // Manually assembled from parts rather than relying on a locale's own
 // punctuation, so the shape stays exactly "Wed 12 Mar, 6:00 PM".
 export function formatDateTimeIST(iso: string) {

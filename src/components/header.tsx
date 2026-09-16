@@ -39,6 +39,12 @@ export async function Header() {
       </span>
       <span className="flex-1" />
       <Link
+        href="/applications"
+        className="text-[13px] font-medium text-navy focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
+      >
+        Applications
+      </Link>
+      <Link
         href="/profile"
         className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-navy font-body text-[12.5px] font-semibold text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
       >

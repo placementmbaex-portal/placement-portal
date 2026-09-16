@@ -12,6 +12,10 @@ const STATUS_LABELS: Record<StatusTagKind, string> = {
   not_selected: "Not selected",
 };
 
+export function statusTagLabel(status: StatusTagKind): string {
+  return STATUS_LABELS[status];
+}
+
 type DotStyle = "none" | "ring" | "filled";
 
 // Ring dots (Applied/Shortlisted/In process) read as "still moving";
