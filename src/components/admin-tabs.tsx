@@ -13,6 +13,8 @@ const TABS = [
   { href: "/admin/profile-fields", label: "Fields" },
   { href: "/admin/import", label: "Import" },
   { href: "/admin/trash", label: "Trash" },
+  { href: "/admin/email-log", label: "Email log" },
+  { href: "/admin/settings", label: "Settings" },
 ];
 
 export function AdminTabs({ pendingCount }: { pendingCount: number }) {

@@ -6,6 +6,7 @@ import { ConfirmSubmitButton } from "@/components/confirm-submit-button";
 import { SignOutButton } from "@/components/sign-out-button";
 import { ProfileFieldsForm, type VisibleProfileField } from "./profile-fields-form";
 import { CvUploadForm } from "./cv-upload-form";
+import { EmailNotificationsToggle } from "./email-notifications-toggle";
 import { deleteCv, viewCv } from "./actions";
 
 const MAX_CVS = 3;
@@ -32,7 +33,7 @@ export default async function ProfilePage() {
       supabase
         .from("students")
         .select(
-          "name, email, roll_no, college, degree, specialization, total_experience_years, phone, linkedin, is_admin, profile",
+          "name, email, roll_no, college, degree, specialization, total_experience_years, phone, linkedin, is_admin, profile, email_notifications",
         )
         .eq("id", user.id)
         .single(),
@@ -218,6 +219,10 @@ export default async function ProfilePage() {
             another.
           </p>
         )}
+      </div>
+
+      <div className="mt-4.5 px-5">
+        <EmailNotificationsToggle enabled={student.email_notifications} />
       </div>
 
       <div className="px-5 pt-5.5">

@@ -4,6 +4,20 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { requireAdmin } from "@/lib/supabase/require-admin";
 import type { ApplicationStatus } from "@/lib/format";
+import { statusTagLabel } from "@/components/status-tag";
+import { notify } from "@/lib/notify";
+import { absoluteUrl } from "@/lib/site-url";
+
+// Same wording for every "your application status changed" notification,
+// whichever action fired it (a single dropdown change or a bulk/CSV
+// shortlist) -- one student, one job, one new status.
+function statusChangeCopy(jobTitle: string, status: string) {
+  const label = statusTagLabel(status as ApplicationStatus);
+  return {
+    title: `Application update: ${jobTitle}`,
+    body: `Your status is now "${label}".`,
+  };
+}
 
 export async function viewApplicantCv(
   jobId: string,
@@ -53,15 +67,29 @@ export async function bulkUpdateStatus(
     return { error: "Choose a status." };
   }
 
-  const { error } = await supabase
+  const { data: updated, error } = await supabase
     .from("applications")
     .update({ status })
     .eq("job_id", jobId)
-    .in("id", applicationIds);
+    .in("id", applicationIds)
+    .select("student_id");
 
   if (error) {
     console.error("bulkUpdateStatus: applications update failed", error);
     return { error: `Could not update status: ${error.message}` };
+  }
+
+  if (updated && updated.length > 0) {
+    const { data: job } = await supabase.from("jobs").select("title").eq("id", jobId).single();
+    const { title, body } = statusChangeCopy(job?.title ?? "your role", status);
+    await notify(supabase, {
+      studentIds: updated.map((row) => row.student_id),
+      type: "application_status_changed",
+      title,
+      body,
+      link: `/jobs/${jobId}`,
+      email: { subject: title, html: `<p>${body}</p><p><a href="${absoluteUrl(`/jobs/${jobId}`)}">View the role</a></p>` },
+    });
   }
 
   revalidatePath(`/admin/jobs/${jobId}/applicants`);
@@ -199,30 +227,16 @@ export async function confirmShortlist(
   }
 
   if (updated && updated.length > 0) {
-    const { data: job } = await supabase
-      .from("jobs")
-      .select("title")
-      .eq("id", jobId)
-      .single();
-
-    // One notification row per student, written now so 5.2's eventual
-    // in-app panel / email delivery has something to read -- this task
-    // doesn't build that delivery UI, only the "fires once per student"
-    // half of the criterion.
-    const { error: notifyError } = await supabase.from("notifications").insert(
-      updated.map((row) => ({
-        user_id: row.student_id,
-        type: "application_status_changed",
-        title: "You've been shortlisted",
-        body: job?.title
-          ? `You've been shortlisted for ${job.title}.`
-          : "You've been shortlisted.",
-        link: `/jobs/${jobId}`,
-      })),
-    );
-    if (notifyError) {
-      console.error("confirmShortlist: notifications insert failed", notifyError);
-    }
+    const { data: job } = await supabase.from("jobs").select("title").eq("id", jobId).single();
+    const { title, body } = statusChangeCopy(job?.title ?? "your role", "shortlisted");
+    await notify(supabase, {
+      studentIds: updated.map((row) => row.student_id),
+      type: "application_status_changed",
+      title,
+      body,
+      link: `/jobs/${jobId}`,
+      email: { subject: title, html: `<p>${body}</p><p><a href="${absoluteUrl(`/jobs/${jobId}`)}">View the role</a></p>` },
+    });
   }
 
   revalidatePath(`/admin/jobs/${jobId}/applicants`);

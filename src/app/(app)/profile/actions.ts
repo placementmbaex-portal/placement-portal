@@ -179,6 +179,34 @@ export async function deleteCv(cvId: string, _formData: FormData) {
   revalidatePath("/profile");
 }
 
+export type UpdateEmailNotificationsResult = { error?: string } | null;
+
+// students.email_notifications isn't in guard_student_update's reset list
+// for non-admins (schema_r3.sql), so this write goes straight through RLS
+// without needing service-role -- same shape as it, just one boolean.
+export async function updateEmailNotifications(
+  next: boolean,
+): Promise<UpdateEmailNotificationsResult> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) redirect("/login");
+
+  const { error } = await supabase
+    .from("students")
+    .update({ email_notifications: next })
+    .eq("id", user.id);
+
+  if (error) {
+    console.error("updateEmailNotifications: students update failed", error);
+    return { error: error.message };
+  }
+
+  revalidatePath("/profile");
+  return null;
+}
+
 export async function viewCv(cvId: string, _formData: FormData) {
   const supabase = await createClient();
   const {

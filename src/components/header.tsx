@@ -1,6 +1,9 @@
 import Image from "next/image";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
+import { NotificationBell, type NotificationItem } from "@/components/notification-bell";
+
+const RECENT_NOTIFICATIONS_LIMIT = 15;
 
 export async function Header() {
   const supabase = await createClient();
@@ -10,11 +13,21 @@ export async function Header() {
 
   if (!user) return null;
 
-  const { data: student } = await supabase
-    .from("students")
-    .select("name")
-    .eq("id", user.id)
-    .single();
+  const [{ data: student }, { data: notifications }, { count: unreadCount }] = await Promise.all([
+    supabase.from("students").select("name").eq("id", user.id).single(),
+    supabase
+      .from("notifications")
+      .select("id, type, title, body, link, read_at, created_at")
+      .eq("user_id", user.id)
+      .order("created_at", { ascending: false })
+      .limit(RECENT_NOTIFICATIONS_LIMIT)
+      .overrideTypes<NotificationItem[], { merge: false }>(),
+    supabase
+      .from("notifications")
+      .select("id", { count: "exact", head: true })
+      .eq("user_id", user.id)
+      .is("read_at", null),
+  ]);
 
   const initials = (student?.name ?? "?")
     .trim()
@@ -44,6 +57,7 @@ export async function Header() {
       >
         Applications
       </Link>
+      <NotificationBell notifications={notifications ?? []} unreadCount={unreadCount ?? 0} />
       <Link
         href="/profile"
         className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-navy font-body text-[12.5px] font-semibold text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"

@@ -3,11 +3,22 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireAdmin } from "@/lib/supabase/require-admin";
+import { notify } from "@/lib/notify";
+import { absoluteUrl } from "@/lib/site-url";
 
 export async function approveAnnouncement(id: string, formData: FormData) {
   const { supabase } = await requireAdmin();
 
   const isPinned = formData.get("is_pinned") === "on";
+
+  // Read before the update, not after -- an admin can re-save an already-
+  // approved post (e.g. flip is_pinned via this same form), and that must
+  // not re-notify every student a second time.
+  const { data: existing } = await supabase
+    .from("announcements")
+    .select("status, title, body, send_email")
+    .eq("id", id)
+    .single();
 
   const { error } = await supabase
     .from("announcements")
@@ -17,6 +28,26 @@ export async function approveAnnouncement(id: string, formData: FormData) {
   if (error) {
     console.error("approveAnnouncement: announcements update failed", error);
     redirect(`/admin/announcements?error=${encodeURIComponent(error.message)}`);
+  }
+
+  if (existing && existing.status !== "approved") {
+    const { data: students } = await supabase.from("students").select("id");
+    const studentIds = (students ?? []).map((s) => s.id);
+    const title = `New announcement: ${existing.title}`;
+
+    await notify(supabase, {
+      studentIds,
+      type: "announcement_approved",
+      title,
+      body: existing.title,
+      link: "/announcements",
+      email: existing.send_email
+        ? {
+            subject: title,
+            html: `<p>${existing.body}</p><p><a href="${absoluteUrl("/announcements")}">View on the portal</a></p>`,
+          }
+        : undefined,
+    });
   }
 
   revalidatePath("/admin/announcements");

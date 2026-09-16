@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { requireAdmin } from "@/lib/supabase/require-admin";
 import { istDatetimeLocalToUtcIso } from "@/lib/format";
+import { notifyJobOpened } from "@/lib/notify";
 
 export type JobFormState = { error?: string } | null;
 
@@ -103,21 +104,29 @@ export async function createJob(
     }
   }
 
-  const { error } = await supabase.from("jobs").insert({
-    company_id: companyId,
-    title,
-    description: description || null,
-    location: location || null,
-    deadline: deadline.value,
-    min_experience_years: minExperienceYears.value,
-    is_open: isOpen,
-    jd_path: jdPath,
-  });
+  const { data: created, error } = await supabase
+    .from("jobs")
+    .insert({
+      company_id: companyId,
+      title,
+      description: description || null,
+      location: location || null,
+      deadline: deadline.value,
+      min_experience_years: minExperienceYears.value,
+      is_open: isOpen,
+      jd_path: jdPath,
+    })
+    .select("id")
+    .single();
 
   if (error) {
     console.error("createJob: jobs insert failed", error);
     if (jdPath) await supabase.storage.from("jds").remove([jdPath]);
     return { error: `Could not create the job: ${error.message}` };
+  }
+
+  if (isOpen && created) {
+    await notifyJobOpened(supabase, created.id);
   }
 
   revalidatePath("/admin/jobs");
@@ -184,7 +193,7 @@ export async function updateJob(
 
   const { data: existingJob } = await supabase
     .from("jobs")
-    .select("jd_path")
+    .select("jd_path, is_open")
     .eq("id", jobId)
     .single();
 
@@ -203,6 +212,10 @@ export async function updateJob(
     await supabase.storage.from("jds").remove([existingJob.jd_path]);
   }
 
+  if (isOpen && !existingJob?.is_open) {
+    await notifyJobOpened(supabase, jobId);
+  }
+
   revalidatePath("/admin/jobs");
   revalidatePath("/");
   revalidatePath(`/jobs/${jobId}`);
@@ -216,12 +229,23 @@ export async function toggleJobOpen(
 ) {
   const { supabase } = await requireAdmin();
 
+  const { data: existingJob } = await supabase
+    .from("jobs")
+    .select("is_open")
+    .eq("id", jobId)
+    .single();
+
   const { error } = await supabase
     .from("jobs")
     .update({ is_open: nextIsOpen })
     .eq("id", jobId);
   if (error) {
     console.error("toggleJobOpen: jobs update failed", error);
+    return;
+  }
+
+  if (nextIsOpen && !existingJob?.is_open) {
+    await notifyJobOpened(supabase, jobId);
   }
 
   revalidatePath("/admin/jobs");

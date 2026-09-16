@@ -18,6 +18,7 @@ export default async function AdminLayout({
 
   let initials = "?";
   let pendingCount = 0;
+  let emailMode: string | null = null;
 
   if (user) {
     const { data: student } = await supabase
@@ -40,6 +41,15 @@ export default async function AdminLayout({
       .select("id", { count: "exact", head: true })
       .eq("status", "pending");
     pendingCount = count ?? 0;
+
+    // Non-admins get nothing back here (RLS), which is fine -- this
+    // banner only ever renders inside an already admin-gated page tree.
+    const { data: setting } = await supabase
+      .from("app_settings")
+      .select("value")
+      .eq("key", "email_mode")
+      .single();
+    emailMode = (setting?.value as string | undefined) ?? null;
   }
 
   return (
@@ -78,6 +88,17 @@ export default async function AdminLayout({
         </div>
         <AdminTabs pendingCount={pendingCount} />
       </div>
+      {emailMode && emailMode !== "live" && (
+        <Link
+          href="/admin/settings"
+          className="flex h-10 items-center justify-center gap-1.5 bg-flame px-4 text-center font-body text-[12.5px] font-semibold text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
+        >
+          {emailMode === "off"
+            ? "Email mode is OFF — no emails are being sent to anyone."
+            : "Email mode is TEST — every email is redirected to the test recipients, not real students."}
+          <span className="underline">Change in Settings</span>
+        </Link>
+      )}
       <div className="px-4 pt-6.5 pb-7.5 sm:px-6">{children}</div>
     </div>
   );
