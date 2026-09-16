@@ -10,6 +10,7 @@ const TABS = [
   { href: "/admin/students", label: "Students" },
   { href: "/admin/announcements", label: "Announcements" },
   { href: "/admin/events", label: "Events" },
+  { href: "/admin/profile-fields", label: "Fields" },
 ];
 
 export function AdminTabs({ pendingCount }: { pendingCount: number }) {
