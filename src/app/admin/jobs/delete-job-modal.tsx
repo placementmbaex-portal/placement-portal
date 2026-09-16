@@ -77,11 +77,11 @@ export function DeleteJobModal({
           </div>
 
           <form action={action} className="mt-4.5">
-            <label htmlFor="confirm_title" className="mb-1.5 block text-[13px] text-slate">
+            <label htmlFor={`confirm_title_${jobId}`} className="mb-1.5 block text-[13px] text-slate">
               Type <span className="font-mono text-[13px] font-semibold text-ink">{jobTitle}</span> to confirm
             </label>
             <input
-              id="confirm_title"
+              id={`confirm_title_${jobId}`}
               name="confirm_title"
               autoComplete="off"
               value={typedTitle}
