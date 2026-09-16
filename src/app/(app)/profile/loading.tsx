@@ -24,13 +24,22 @@ export default function ProfileLoading() {
       <div className="px-5 pt-5.5">
         <Skeleton className="h-3 w-36 bg-rule" />
       </div>
-      <Skeleton className="mt-2.5 mx-4 h-[124px] rounded-xl bg-rule" />
+      <Skeleton className="mt-2.5 mx-4 h-[240px] rounded-xl bg-rule" />
 
-      <div className="px-5 pt-5">
-        <Skeleton className="h-3 w-24 bg-rule" />
+      <div className="px-5 pt-5.5">
+        <Skeleton className="h-3 w-44 bg-rule" />
+        <Skeleton className="mt-2.5 h-1.5 w-full rounded-full bg-rule" />
       </div>
-      <div className="mt-2.5 space-y-3 px-5">
-        <Skeleton className="h-11 w-full rounded-lg bg-rule" />
+
+      <div className="mt-4.5 space-y-5 px-5">
+        <div className="space-y-2">
+          <Skeleton className="h-3 w-20 bg-rule" />
+          <Skeleton className="h-[140px] w-full rounded-xl bg-rule" />
+        </div>
+        <div className="space-y-2">
+          <Skeleton className="h-3 w-24 bg-rule" />
+          <Skeleton className="h-[100px] w-full rounded-xl bg-rule" />
+        </div>
         <Skeleton className="h-11 w-full rounded-lg bg-rule" />
       </div>
     </main>

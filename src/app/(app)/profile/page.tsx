@@ -4,11 +4,21 @@ import { createClient } from "@/lib/supabase/server";
 import { formatDateIST } from "@/lib/format";
 import { ConfirmSubmitButton } from "@/components/confirm-submit-button";
 import { SignOutButton } from "@/components/sign-out-button";
-import { ProfileForm } from "./profile-form";
+import { ProfileFieldsForm, type VisibleProfileField } from "./profile-fields-form";
 import { CvUploadForm } from "./cv-upload-form";
 import { deleteCv, viewCv } from "./actions";
 
 const MAX_CVS = 3;
+
+// A value only counts toward the completeness indicator once it has
+// something in it: false and 0 are real answers (so they count), but an
+// empty string, empty array, or unset key is not.
+function isFilled(value: unknown): boolean {
+  if (value === null || value === undefined) return false;
+  if (typeof value === "string") return value.trim().length > 0;
+  if (Array.isArray(value)) return value.length > 0;
+  return true;
+}
 
 export default async function ProfilePage() {
   const supabase = await createClient();
@@ -17,15 +27,24 @@ export default async function ProfilePage() {
   } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
-  const [{ data: student }, { data: cvs }, { data: applications }] =
+  const [{ data: student }, { data: profileFields }, { data: cvs }, { data: applications }] =
     await Promise.all([
       supabase
         .from("students")
         .select(
-          "name, email, roll_no, specialization, total_experience_years, phone, linkedin, is_admin",
+          "name, email, roll_no, college, degree, specialization, total_experience_years, phone, linkedin, is_admin, profile",
         )
         .eq("id", user.id)
         .single(),
+      supabase
+        .from("profile_fields")
+        .select(
+          "field_key, label, field_type, options, section, display_order, student_editable, required, help_text",
+        )
+        .eq("student_visible", true)
+        .order("section", { ascending: true })
+        .order("display_order", { ascending: true })
+        .overrideTypes<VisibleProfileField[], { merge: false }>(),
       supabase
         .from("cvs")
         .select("id, label, file_path, created_at")
@@ -35,6 +54,33 @@ export default async function ProfilePage() {
     ]);
 
   if (!student) redirect("/login");
+
+  // students.phone / students.linkedin predate the profile registry and
+  // are now superseded by the "phone" / "linkedin" entries it seeds --
+  // fall back to the old column only when the jsonb has never been
+  // written, so an existing value isn't shown as blank the first time
+  // this page loads under the new registry-driven form.
+  const legacyColumnFallback: Record<string, string | null> = {
+    phone: student.phone,
+    linkedin: student.linkedin,
+  };
+  const profileValues: Record<string, unknown> = { ...(student.profile ?? {}) };
+  for (const [key, legacyValue] of Object.entries(legacyColumnFallback)) {
+    if (profileValues[key] === undefined) profileValues[key] = legacyValue;
+  }
+
+  const fields = profileFields ?? [];
+  const sections = new Map<string, VisibleProfileField[]>();
+  for (const field of fields) {
+    const list = sections.get(field.section) ?? [];
+    list.push(field);
+    sections.set(field.section, list);
+  }
+
+  const requiredFields = fields.filter((field) => field.required);
+  const completedCount = requiredFields.filter((field) =>
+    isFilled(profileValues[field.field_key]),
+  ).length;
 
   const cvList = cvs ?? [];
   const usageByCv = new Map<string, number>();
@@ -183,7 +229,15 @@ export default async function ProfilePage() {
         {[
           ["Roll no.", student.roll_no ?? "—"],
           ["Email", student.email],
+          ["College", student.college],
+          ["Degree", student.degree],
           ["Specialisation", student.specialization],
+          [
+            "Total experience",
+            student.total_experience_years != null
+              ? `${student.total_experience_years} yrs`
+              : "—",
+          ],
         ].map(([label, value], i, arr) => (
           <div key={label}>
             <div className="flex justify-between px-3.5 py-2.5">
@@ -198,14 +252,29 @@ export default async function ProfilePage() {
         Contact a placement rep to correct any of this.
       </p>
 
-      <div className="px-5 pt-5">
-        <p className="font-body text-[10.5px] font-semibold tracking-[0.1em] text-slate uppercase">
-          You can edit
-        </p>
-      </div>
-      <div className="mt-2.5 mb-5 px-5">
-        <ProfileForm phone={student.phone} linkedin={student.linkedin} />
-      </div>
+      {requiredFields.length > 0 && (
+        <div className="px-5 pt-5.5">
+          <div className="flex items-baseline justify-between">
+            <p className="text-[13px] font-medium text-ink">
+              {completedCount} of {requiredFields.length} required fields complete
+            </p>
+          </div>
+          <div className="mt-1.5 h-1.5 w-full overflow-hidden rounded-full bg-rule">
+            <div
+              className="h-full rounded-full bg-ink"
+              style={{
+                width: `${Math.round((completedCount / requiredFields.length) * 100)}%`,
+              }}
+            />
+          </div>
+        </div>
+      )}
+
+      {sections.size > 0 && (
+        <div className="mt-4.5 mb-5 px-5">
+          <ProfileFieldsForm sections={Array.from(sections.entries())} values={profileValues} />
+        </div>
+      )}
 
       <div className="flex flex-col gap-3 px-5">
         {student.is_admin && (

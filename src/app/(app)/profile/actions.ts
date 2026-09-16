@@ -7,28 +7,71 @@ import { createClient } from "@/lib/supabase/server";
 const MAX_CV_BYTES = 2 * 1024 * 1024;
 const MAX_CVS = 3;
 
-export type ProfileFormState = { error?: string; success?: boolean } | null;
+export type ProfileFieldsFormState = { error?: string; success?: boolean } | null;
 
-export async function updateProfile(
-  _prevState: ProfileFormState,
+// Builds the profile jsonb from whatever is currently marked
+// student_editable — never from a client-supplied field list, so a
+// hidden/stale form can't smuggle in a value for a field that was locked
+// down after the page was rendered. The guard_profile_jsonb trigger also
+// filters non-editable keys itself, but that alone isn't enough here: for
+// an admin (also a student, also able to open this page) the trigger
+// skips its merge entirely and writes `new.profile` as-is, so sending
+// only the edited keys would wipe every admin-only field on their own
+// row. Fetching and spreading the current profile first keeps this
+// correct for both cases; the trigger's own filtering stays real defense
+// for the non-admin path, just not the only thing this relies on.
+export async function updateProfileFields(
+  _prevState: ProfileFieldsFormState,
   formData: FormData,
-): Promise<ProfileFormState> {
+): Promise<ProfileFieldsFormState> {
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
-  const phone = ((formData.get("phone") as string) ?? "").trim();
-  const linkedin = ((formData.get("linkedin") as string) ?? "").trim();
+  const [{ data: student }, { data: fields }] = await Promise.all([
+    supabase.from("students").select("profile").eq("id", user.id).single(),
+    supabase
+      .from("profile_fields")
+      .select("field_key, field_type")
+      .eq("student_visible", true)
+      .eq("student_editable", true),
+  ]);
+
+  const profile: Record<string, unknown> = {
+    ...((student?.profile as Record<string, unknown> | null) ?? {}),
+  };
+
+  for (const field of fields ?? []) {
+    const key = field.field_key;
+    switch (field.field_type) {
+      case "boolean":
+        profile[key] = formData.get(key) === "on";
+        break;
+      case "multiselect":
+        profile[key] = formData.getAll(key) as string[];
+        break;
+      case "number": {
+        const raw = ((formData.get(key) as string) ?? "").trim();
+        const parsed = raw === "" ? null : Number(raw);
+        profile[key] = parsed === null || Number.isNaN(parsed) ? null : parsed;
+        break;
+      }
+      default: {
+        const raw = ((formData.get(key) as string) ?? "").trim();
+        profile[key] = raw || null;
+      }
+    }
+  }
 
   const { error } = await supabase
     .from("students")
-    .update({ phone: phone || null, linkedin: linkedin || null })
+    .update({ profile })
     .eq("id", user.id);
 
   if (error) {
-    console.error("updateProfile: students update failed", error);
+    console.error("updateProfileFields: students update failed", error);
     return { error: `Could not save your changes: ${error.message}` };
   }
 
