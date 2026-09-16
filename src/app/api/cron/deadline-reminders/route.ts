@@ -4,8 +4,14 @@ import { notify } from "@/lib/notify";
 import { formatDateTimeIST } from "@/lib/format";
 import { absoluteUrl } from "@/lib/site-url";
 
-// Vercel Cron hits this hourly (see vercel.json) with
-// Authorization: Bearer $CRON_SECRET, which Vercel adds automatically when
+// PRD 5.2 calls for this running hourly, but Vercel's Hobby plan caps cron
+// jobs at once a day (an hourly schedule fails the whole deployment) --
+// see vercel.json. Once daily is still correct, just coarser: the 24h
+// window plus the idempotency check below don't depend on how often this
+// runs, only on it running at least once before each deadline. Upgrading
+// the Vercel plan is a one-line schedule change, nothing here.
+//
+// Vercel Cron sends Authorization: Bearer $CRON_SECRET automatically when
 // CRON_SECRET is set as an env var on the project. There is no admin
 // session on this request at all, so it's the one legitimate place in the
 // app that reaches for the service-role client directly (CLAUDE.md: only
