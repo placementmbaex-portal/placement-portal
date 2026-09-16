@@ -1,9 +1,8 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { formatDateIST } from "@/lib/format";
-import { applicationStatusChip } from "@/lib/chips";
+import { formatDateIST, type ApplicationStatus } from "@/lib/format";
 import { getStatusChangedAtMap } from "@/lib/application-status";
-import { Chip } from "@/components/chip";
+import { StatusTag } from "@/components/status-tag";
 import { ConfirmSubmitButton } from "@/components/confirm-submit-button";
 import { withdrawApplication } from "@/app/(app)/jobs/[id]/actions";
 
@@ -72,7 +71,6 @@ export default async function ApplicationsPage() {
           </p>
         ) : (
           applicationList.map((application) => {
-            const chip = applicationStatusChip(application.status);
             const stepIndex = PIPELINE.findIndex(
               (step) => step.key === application.status,
             );
@@ -104,7 +102,7 @@ export default async function ApplicationsPage() {
                     </p>
                   </div>
                   <div className="shrink-0">
-                    <Chip style={chip} />
+                    <StatusTag status={application.status as ApplicationStatus} />
                   </div>
                 </div>
 

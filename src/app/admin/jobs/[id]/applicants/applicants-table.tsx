@@ -2,9 +2,8 @@
 
 import { useActionState, useState } from "react";
 import Link from "next/link";
-import { formatDateIST, formatDateTimeIST } from "@/lib/format";
-import { applicationStatusChip } from "@/lib/chips";
-import { Chip } from "@/components/chip";
+import { formatDateIST, formatDateTimeIST, type ApplicationStatus } from "@/lib/format";
+import { StatusTag } from "@/components/status-tag";
 import { viewApplicantCv, bulkUpdateStatus, type BulkStatusState } from "./actions";
 
 const initialState: BulkStatusState = null;
@@ -196,7 +195,7 @@ export function ApplicantsTable({
                     className="px-2 whitespace-nowrap"
                     title={`Updated ${formatDateTimeIST(application.status_changed_at)}`}
                   >
-                    <Chip style={applicationStatusChip(application.status)} />
+                    <StatusTag status={application.status as ApplicationStatus} />
                   </td>
                 </tr>
               );
@@ -230,7 +229,7 @@ export function ApplicantsTable({
                     {application.student?.name}
                   </p>
                   <span title={`Updated ${formatDateTimeIST(application.status_changed_at)}`}>
-                    <Chip style={applicationStatusChip(application.status)} />
+                    <StatusTag status={application.status as ApplicationStatus} />
                   </span>
                 </div>
                 <p className="mt-0.5 text-[12px] text-slate">

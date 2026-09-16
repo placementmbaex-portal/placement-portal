@@ -6,6 +6,7 @@ import {
   type DeadlineUrgency,
 } from "@/lib/format";
 import { CompanyLogo } from "@/components/company-logo";
+import { StatusTag, type StatusTagKind } from "@/components/status-tag";
 
 type JobCardJob = {
   id: string;
@@ -32,6 +33,7 @@ export function JobCard({
   companyName,
   companyLogoUrl,
   applied,
+  status,
   hideCompany = false,
   showApplyButton = false,
 }: {
@@ -39,6 +41,11 @@ export function JobCard({
   companyName?: string | null;
   companyLogoUrl?: string | null;
   applied: boolean;
+  // Optional: when given, renders the full status tag instead of the
+  // plain "Applied" text -- callers that don't track the richer status
+  // (or the student's own not-applied/not-eligible standing) keep the
+  // old boolean-only behaviour.
+  status?: StatusTagKind;
   hideCompany?: boolean;
   showApplyButton?: boolean;
 }) {
@@ -78,10 +85,14 @@ export function JobCard({
             </p>
           )}
         </div>
-        {applied && (
-          <span className="shrink-0 text-[12.5px] font-medium whitespace-nowrap text-live">
-            Applied ✓
-          </span>
+        {status ? (
+          <StatusTag status={status} className="shrink-0" />
+        ) : (
+          applied && (
+            <span className="shrink-0 text-[12.5px] font-medium whitespace-nowrap text-live">
+              Applied ✓
+            </span>
+          )
         )}
       </div>
 

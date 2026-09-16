@@ -9,6 +9,7 @@ import {
   utcIsoToIstDatetimeLocal,
 } from "@/lib/format";
 import { JobCard } from "@/components/job-card";
+import { deriveJobStatusTag } from "@/components/status-tag";
 import { AnnouncementCard, type AnnouncementData } from "@/components/announcement-card";
 import { getCalendarEntries } from "@/lib/calendar-data";
 
@@ -66,7 +67,11 @@ export default async function DashboardPage() {
     { data: pinnedAnnouncements },
     weekEntries,
   ] = await Promise.all([
-    supabase.from("students").select("name").eq("id", user.id).single(),
+    supabase
+      .from("students")
+      .select("name, total_experience_years")
+      .eq("id", user.id)
+      .single(),
     supabase
       .from("jobs")
       .select(
@@ -77,7 +82,7 @@ export default async function DashboardPage() {
       .overrideTypes<OpenJob[], { merge: false }>(),
     supabase
       .from("applications")
-      .select("job_id")
+      .select("job_id, status")
       .eq("student_id", user.id),
     supabase
       .from("announcements")
@@ -94,9 +99,11 @@ export default async function DashboardPage() {
 
   const firstName = (student?.name ?? "there").trim().split(/\s+/)[0];
   const jobList = openJobs ?? [];
-  const appliedJobIds = new Set(
-    (applications ?? []).map((a) => a.job_id).filter(Boolean),
+  const statusByJobId = new Map(
+    (applications ?? []).map((a) => [a.job_id, a.status] as const),
   );
+  const appliedJobIds = new Set(statusByJobId.keys());
+  const studentExperience = student?.total_experience_years ?? null;
 
   const soonestNotApplied = jobList.find((job) => !appliedJobIds.has(job.id));
   const showUrgentBand =
@@ -212,6 +219,11 @@ export default async function DashboardPage() {
                 companyName={job.company?.name}
                 companyLogoUrl={job.company?.logo_url}
                 applied={appliedJobIds.has(job.id)}
+                status={deriveJobStatusTag({
+                  applicationStatus: statusByJobId.get(job.id),
+                  minExperienceYears: job.min_experience_years,
+                  studentExperienceYears: studentExperience,
+                })}
               />
             ))}
           </div>

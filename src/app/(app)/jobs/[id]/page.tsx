@@ -2,7 +2,6 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import {
-  formatApplicationStatus,
   formatDateIST,
   formatCountdown,
   formatDateTimeIST,
@@ -10,6 +9,7 @@ import {
 } from "@/lib/format";
 import { CompanyLogo } from "@/components/company-logo";
 import { ConfirmSubmitButton } from "@/components/confirm-submit-button";
+import { StatusTag, deriveJobStatusTag } from "@/components/status-tag";
 import { getStatusChangedAtMap } from "@/lib/application-status";
 import { ApplyDialog } from "./apply-dialog";
 import { viewJd, withdrawApplication } from "./actions";
@@ -100,6 +100,11 @@ export default async function JobPage({
   if (cvList.length === 0) reasons.push("Upload a CV before applying.");
 
   const urgency = getDeadlineUrgency(job.deadline);
+  const statusTag = deriveJobStatusTag({
+    applicationStatus: application?.status,
+    minExperienceYears: job.min_experience_years,
+    studentExperienceYears: student?.total_experience_years,
+  });
 
   return (
     <main className="flex flex-1 flex-col gap-5 pb-8">
@@ -157,6 +162,10 @@ export default async function JobPage({
             </span>
           </div>
         )}
+
+        <div className="mt-2.5">
+          <StatusTag status={statusTag} />
+        </div>
       </div>
 
       {job.min_experience_years != null && (
@@ -208,12 +217,9 @@ export default async function JobPage({
               <span className="font-medium">{application.cv?.label}</span> on{" "}
               {formatDateIST(application.applied_at)}.
             </p>
-            <p className="text-[15px] leading-[1.55] text-ink">
-              Status: {formatApplicationStatus(application.status)}
-              <span className="text-slate">
-                {" "}
-                · Updated {formatDateIST(statusChangedAt!)}
-              </span>
+            <p className="flex flex-wrap items-center gap-x-1.5 text-[15px] leading-[1.55] text-ink">
+              <StatusTag status={statusTag} />
+              <span className="text-slate">· Updated {formatDateIST(statusChangedAt!)}</span>
             </p>
             {!deadlinePassed && (
               <form action={withdrawApplication.bind(null, application.id)}>

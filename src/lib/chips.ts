@@ -22,23 +22,3 @@ export const PINNED_CHIP: ChipStyle = {
   bg: "#E7EEF6",
   text: "#014488",
 };
-
-// Application-status chips reuse the category palette rather than
-// inventing a new one: Applied -> ppt colours, Shortlisted/Offer ->
-// shortlist colours, In process/Not selected -> general-notice colours.
-export function applicationStatusChip(status: string): ChipStyle {
-  switch (status) {
-    case "applied":
-      return { ...CATEGORY_CHIPS.ppt, label: "Applied" };
-    case "shortlisted":
-      return { ...CATEGORY_CHIPS.shortlist, label: "Shortlisted" };
-    case "offer":
-      return { ...CATEGORY_CHIPS.shortlist, label: "Offer" };
-    case "in_process":
-      return { ...CATEGORY_CHIPS.general, label: "In process" };
-    case "not_selected":
-      return { ...CATEGORY_CHIPS.general, label: "Not selected" };
-    default:
-      return { ...CATEGORY_CHIPS.general, label: status };
-  }
-}
