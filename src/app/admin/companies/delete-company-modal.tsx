@@ -13,12 +13,12 @@ export function DeleteCompanyModal({
   companyId,
   companyName,
   impact,
-  trigger,
+  triggerClassName,
 }: {
   companyId: string;
   companyName: string;
   impact: { jobs: number; applications: number; events: number };
-  trigger: (open: () => void) => React.ReactNode;
+  triggerClassName: string;
 }) {
   const dialogRef = useRef<HTMLDialogElement>(null);
   const [open, setOpen] = useState(false);
@@ -44,7 +44,9 @@ export function DeleteCompanyModal({
 
   return (
     <>
-      {trigger(() => setOpen(true))}
+      <button type="button" onClick={() => setOpen(true)} className={triggerClassName}>
+        Delete
+      </button>
       <dialog
         ref={dialogRef}
         onClose={() => setOpen(false)}

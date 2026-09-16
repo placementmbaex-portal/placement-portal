@@ -97,15 +97,7 @@ export default async function AdminCompaniesPage() {
                         companyId={company.id}
                         companyName={company.name}
                         impact={impactByCompany.get(company.id) ?? { jobs: 0, applications: 0, events: 0 }}
-                        trigger={(open) => (
-                          <button
-                            type="button"
-                            onClick={open}
-                            className="text-closing underline underline-offset-2 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
-                          >
-                            Delete
-                          </button>
-                        )}
+                        triggerClassName="text-closing underline underline-offset-2 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
                       />
                     </td>
                   </tr>
@@ -132,15 +124,7 @@ export default async function AdminCompaniesPage() {
                       companyId={company.id}
                       companyName={company.name}
                       impact={impactByCompany.get(company.id) ?? { jobs: 0, applications: 0, events: 0 }}
-                      trigger={(open) => (
-                        <button
-                          type="button"
-                          onClick={open}
-                          className="flex h-11 items-center px-2 font-body text-[13px] font-medium text-closing focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
-                        >
-                          Delete
-                        </button>
-                      )}
+                      triggerClassName="flex h-11 items-center px-2 font-body text-[13px] font-medium text-closing focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
                     />
                   </div>
                 </div>
