@@ -31,41 +31,37 @@ export default async function AdminJobsPage({
     : "all";
   const query = (q ?? "").trim().toLowerCase();
 
-  const [
-    { data: jobs },
-    { data: applications },
-    { data: events },
-    { data: announcements },
-  ] = await Promise.all([
+  const [{ data: jobs }, { data: applications }] = await Promise.all([
     supabase
       .from("jobs")
       .select("id, title, deadline, is_open, company:companies(id, name)")
+      .is("deleted_at", null)
       .order("created_at", { ascending: false })
       .overrideTypes<JobRow[], { merge: false }>(),
     supabase.from("applications").select("job_id, status"),
-    supabase.from("events").select("job_id").not("job_id", "is", null),
-    supabase.from("announcements").select("job_id").not("job_id", "is", null),
   ]);
 
   const applicantCounts = new Map<string, number>();
-  const offerCounts = new Map<string, number>();
   for (const application of applications ?? []) {
     applicantCounts.set(application.job_id, (applicantCounts.get(application.job_id) ?? 0) + 1);
-    if (application.status === "offer") {
-      offerCounts.set(application.job_id, (offerCounts.get(application.job_id) ?? 0) + 1);
-    }
-  }
-  const eventCounts = new Map<string, number>();
-  for (const event of events ?? []) {
-    if (event.job_id) eventCounts.set(event.job_id, (eventCounts.get(event.job_id) ?? 0) + 1);
-  }
-  const announcementCounts = new Map<string, number>();
-  for (const announcement of announcements ?? []) {
-    if (announcement.job_id)
-      announcementCounts.set(announcement.job_id, (announcementCounts.get(announcement.job_id) ?? 0) + 1);
   }
 
   const allJobs = jobs ?? [];
+
+  type JobImpact = { applications: number; events: number };
+  const impactByJob = new Map<string, JobImpact>();
+  await Promise.all(
+    allJobs.map(async (job) => {
+      const { data } = await supabase.rpc("deletion_impact", {
+        p_kind: "job",
+        p_id: job.id,
+      });
+      impactByJob.set(job.id, {
+        applications: data?.applications ?? 0,
+        events: data?.events ?? 0,
+      });
+    }),
+  );
   const openCount = allJobs.filter((j) => j.is_open).length;
   const closingCount = allJobs.filter(
     (j) => j.is_open && getDeadlineUrgency(j.deadline) === "urgent",
@@ -219,12 +215,7 @@ export default async function AdminJobsPage({
                           jobTitle={job.title}
                           companyName={job.company?.name ?? ""}
                           isOpen={job.is_open}
-                          impact={{
-                            applications: applicantCounts.get(job.id) ?? 0,
-                            offers: offerCounts.get(job.id) ?? 0,
-                            events: eventCounts.get(job.id) ?? 0,
-                            announcements: announcementCounts.get(job.id) ?? 0,
-                          }}
+                          impact={impactByJob.get(job.id) ?? { applications: 0, events: 0 }}
                         />
                       </td>
                     </tr>
@@ -293,12 +284,7 @@ export default async function AdminJobsPage({
                           jobTitle={job.title}
                           companyName={job.company?.name ?? ""}
                           isOpen={job.is_open}
-                          impact={{
-                            applications: applicantCount,
-                            offers: offerCounts.get(job.id) ?? 0,
-                            events: eventCounts.get(job.id) ?? 0,
-                            announcements: announcementCounts.get(job.id) ?? 0,
-                          }}
+                          impact={impactByJob.get(job.id) ?? { applications: 0, events: 0 }}
                         />
                       </div>
                     </div>

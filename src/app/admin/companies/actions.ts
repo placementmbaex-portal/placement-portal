@@ -69,3 +69,56 @@ export async function updateCompany(
   revalidatePath(`/companies/${companyId}`);
   redirect("/admin/companies");
 }
+
+export type DeleteCompanyState = { error?: string } | null;
+
+// Soft delete only -- see the comment on deleteJob in admin/jobs/actions.ts
+// for why a real DELETE isn't used. Deleting a company also hides its
+// still-live jobs, stamped with the same deleted_at so restoreCompany can
+// find exactly the jobs this cascade hid and no others.
+export async function deleteCompany(
+  companyId: string,
+  expectedName: string,
+  _prevState: DeleteCompanyState,
+  formData: FormData,
+): Promise<DeleteCompanyState> {
+  const { supabase, user } = await requireAdmin();
+
+  const typed = ((formData.get("confirm_name") as string) ?? "").trim();
+  if (typed !== expectedName) {
+    return { error: "That doesn't match the company name. Nothing was deleted." };
+  }
+
+  const deletedAt = new Date().toISOString();
+
+  const { error } = await supabase
+    .from("companies")
+    .update({ deleted_at: deletedAt, deleted_by: user.id })
+    .eq("id", companyId);
+
+  if (error) {
+    console.error("deleteCompany: companies soft-delete failed", error);
+    return { error: `Could not delete the company: ${error.message}` };
+  }
+
+  const { error: jobsError } = await supabase
+    .from("jobs")
+    .update({ deleted_at: deletedAt, deleted_by: user.id })
+    .eq("company_id", companyId)
+    .is("deleted_at", null);
+
+  if (jobsError) {
+    console.error("deleteCompany: jobs cascade soft-delete failed", jobsError);
+    return {
+      error: `The company was deleted, but its jobs could not be hidden: ${jobsError.message}`,
+    };
+  }
+
+  revalidatePath("/admin/companies");
+  revalidatePath("/admin/jobs");
+  revalidatePath("/admin/trash");
+  revalidatePath("/");
+  revalidatePath("/jobs");
+  revalidatePath(`/companies/${companyId}`);
+  redirect("/admin/companies");
+}

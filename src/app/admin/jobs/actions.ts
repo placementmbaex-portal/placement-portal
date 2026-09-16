@@ -231,39 +231,37 @@ export async function toggleJobOpen(
 
 export type DeleteJobState = { error?: string } | null;
 
+// Soft delete only -- a real DELETE cascades to applications and events
+// (schema.sql's FKs) and would destroy application history. Setting
+// deleted_at/deleted_by hides the role from every list and from RLS
+// (jobs_read) without touching a single other row; /admin/trash is where
+// it can be restored or, once it has zero applications, hard-deleted for
+// real.
 export async function deleteJob(
   jobId: string,
   expectedTitle: string,
   _prevState: DeleteJobState,
   formData: FormData,
 ): Promise<DeleteJobState> {
-  const { supabase } = await requireAdmin();
+  const { supabase, user } = await requireAdmin();
 
   const typed = ((formData.get("confirm_title") as string) ?? "").trim();
   if (typed !== expectedTitle) {
     return { error: "That doesn't match the role title. Nothing was deleted." };
   }
 
-  const { data: job } = await supabase
+  const { error } = await supabase
     .from("jobs")
-    .select("jd_path")
-    .eq("id", jobId)
-    .single();
+    .update({ deleted_at: new Date().toISOString(), deleted_by: user.id })
+    .eq("id", jobId);
 
-  // Applications (and their status history) cascade on delete, and so do
-  // events referencing this job -- but announcements referencing it only
-  // have their job_id set to null, not removed. Per the FKs in schema.sql.
-  const { error } = await supabase.from("jobs").delete().eq("id", jobId);
   if (error) {
-    console.error("deleteJob: jobs delete failed", error);
+    console.error("deleteJob: jobs soft-delete failed", error);
     return { error: `Could not delete the role: ${error.message}` };
   }
 
-  if (job?.jd_path) {
-    await supabase.storage.from("jds").remove([job.jd_path]);
-  }
-
   revalidatePath("/admin/jobs");
+  revalidatePath("/admin/trash");
   revalidatePath("/");
   revalidatePath("/jobs");
   revalidatePath("/applications");

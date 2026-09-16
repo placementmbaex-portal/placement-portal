@@ -16,7 +16,7 @@ export function JobRowMenu({
   jobTitle: string;
   companyName: string;
   isOpen: boolean;
-  impact: { applications: number; offers: number; events: number; announcements: number };
+  impact: { applications: number; events: number };
 }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);

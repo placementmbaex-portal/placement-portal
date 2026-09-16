@@ -8,6 +8,7 @@ export default async function NewJobPage() {
   const { data: companies } = await supabase
     .from("companies")
     .select("id, name")
+    .is("deleted_at", null)
     .order("name");
 
   return (

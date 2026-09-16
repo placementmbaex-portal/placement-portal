@@ -1,5 +1,8 @@
 import Link from "next/link";
 import { requireAdmin } from "@/lib/supabase/require-admin";
+import { DeleteCompanyModal } from "./delete-company-modal";
+
+type CompanyImpact = { jobs: number; applications: number; events: number };
 
 export default async function AdminCompaniesPage() {
   const { supabase } = await requireAdmin();
@@ -8,8 +11,9 @@ export default async function AdminCompaniesPage() {
     supabase
       .from("companies")
       .select("id, name, sector, is_legacy_recruiter")
+      .is("deleted_at", null)
       .order("name"),
-    supabase.from("jobs").select("company_id"),
+    supabase.from("jobs").select("company_id").is("deleted_at", null),
   ]);
 
   const jobCounts = new Map<string, number>();
@@ -18,6 +22,21 @@ export default async function AdminCompaniesPage() {
   }
 
   const companyList = companies ?? [];
+
+  const impactByCompany = new Map<string, CompanyImpact>();
+  await Promise.all(
+    companyList.map(async (company) => {
+      const { data } = await supabase.rpc("deletion_impact", {
+        p_kind: "company",
+        p_id: company.id,
+      });
+      impactByCompany.set(company.id, {
+        jobs: data?.jobs ?? 0,
+        applications: data?.applications ?? 0,
+        events: data?.events ?? 0,
+      });
+    }),
+  );
 
   return (
     <main className="flex flex-col gap-5">
@@ -66,13 +85,28 @@ export default async function AdminCompaniesPage() {
                     <td className="px-4 text-slate">
                       {company.is_legacy_recruiter ? "Yes" : "—"}
                     </td>
-                    <td className="px-4 text-right">
+                    <td className="px-4 text-right whitespace-nowrap">
                       <Link
                         href={`/admin/companies/${company.id}/edit`}
                         className="text-navy focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
                       >
                         Edit
                       </Link>
+                      <span className="mx-2 text-rule">|</span>
+                      <DeleteCompanyModal
+                        companyId={company.id}
+                        companyName={company.name}
+                        impact={impactByCompany.get(company.id) ?? { jobs: 0, applications: 0, events: 0 }}
+                        trigger={(open) => (
+                          <button
+                            type="button"
+                            onClick={open}
+                            className="text-closing underline underline-offset-2 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
+                          >
+                            Delete
+                          </button>
+                        )}
+                      />
                     </td>
                   </tr>
                 ))}
@@ -87,12 +121,28 @@ export default async function AdminCompaniesPage() {
                   <p className="min-w-0 truncate font-display text-[15px] font-semibold text-ink">
                     {company.name}
                   </p>
-                  <Link
-                    href={`/admin/companies/${company.id}/edit`}
-                    className="-mr-2 -mt-1.5 flex h-11 shrink-0 items-center px-2 font-body text-[13px] font-medium text-navy focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
-                  >
-                    Edit
-                  </Link>
+                  <div className="-mr-2 -mt-1.5 flex shrink-0 items-center gap-1">
+                    <Link
+                      href={`/admin/companies/${company.id}/edit`}
+                      className="flex h-11 items-center px-2 font-body text-[13px] font-medium text-navy focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
+                    >
+                      Edit
+                    </Link>
+                    <DeleteCompanyModal
+                      companyId={company.id}
+                      companyName={company.name}
+                      impact={impactByCompany.get(company.id) ?? { jobs: 0, applications: 0, events: 0 }}
+                      trigger={(open) => (
+                        <button
+                          type="button"
+                          onClick={open}
+                          className="flex h-11 items-center px-2 font-body text-[13px] font-medium text-closing focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
+                        >
+                          Delete
+                        </button>
+                      )}
+                    />
+                  </div>
                 </div>
                 <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-[12.5px] text-slate">
                   <span>{company.sector ?? "No sector"}</span>

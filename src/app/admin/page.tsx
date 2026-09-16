@@ -27,8 +27,11 @@ export default async function AdminOverviewPage() {
     supabase.from("students").select("id", { count: "exact", head: true }),
     supabase.from("cvs").select("student_id"),
     supabase.from("applications").select("student_id"),
-    supabase.from("companies").select("id", { count: "exact", head: true }),
-    supabase.from("jobs").select("id", { count: "exact", head: true }),
+    supabase
+      .from("companies")
+      .select("id", { count: "exact", head: true })
+      .is("deleted_at", null),
+    supabase.from("jobs").select("id", { count: "exact", head: true }).is("deleted_at", null),
     supabase.from("applications").select("id", { count: "exact", head: true }),
     supabase
       .from("applications")
@@ -41,12 +44,14 @@ export default async function AdminOverviewPage() {
     supabase
       .from("jobs")
       .select("id", { count: "exact", head: true })
+      .is("deleted_at", null)
       .eq("is_open", true)
       .gt("deadline", now.toISOString())
       .lt("deadline", attentionWindowEnd.toISOString()),
     supabase
       .from("jobs")
       .select("id, title, company:companies(name), applications(status)")
+      .is("deleted_at", null)
       .eq("is_open", true)
       .overrideTypes<
         {

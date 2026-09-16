@@ -5,6 +5,10 @@ import { deleteJob, toggleJobOpen, type DeleteJobState } from "./actions";
 
 const initialState: DeleteJobState = null;
 
+function plural(count: number, noun: string) {
+  return `${count} ${noun}${count === 1 ? "" : "s"}`;
+}
+
 export function DeleteJobModal({
   jobId,
   jobTitle,
@@ -15,7 +19,7 @@ export function DeleteJobModal({
   jobId: string;
   jobTitle: string;
   companyName: string;
-  impact: { applications: number; offers: number; events: number; announcements: number };
+  impact: { applications: number; events: number };
   onOpen?: () => void;
 }) {
   const dialogRef = useRef<HTMLDialogElement>(null);
@@ -48,40 +52,17 @@ export function DeleteJobModal({
             Delete &ldquo;{jobTitle}&rdquo; at {companyName}?
           </h2>
           <p className="mt-2.5 text-[14px] leading-[1.6] text-ink">
-            This cannot be undone. Deleting the role will:
+            This job has {plural(impact.applications, "application")} and{" "}
+            {plural(impact.events, "linked event")}. They will be hidden but not destroyed —
+            restore it from Trash any time.
           </p>
-          <div className="mt-3.5 flex flex-col gap-2 rounded-md border border-[rgba(251,88,19,0.28)] bg-[#FDEAE0] px-4 py-3.5">
-            <div className="flex justify-between">
-              <span className="text-[13.5px] text-ink">Delete applications from students</span>
-              <span className="font-body text-[13.5px] font-semibold tabular-nums text-closing">
-                {impact.applications}
-              </span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-[13.5px] text-ink">Delete recorded offers</span>
-              <span className="font-body text-[13.5px] font-semibold tabular-nums text-closing">
-                {impact.offers}
-              </span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-[13.5px] text-ink">Delete calendar events</span>
-              <span className="font-body text-[13.5px] font-semibold tabular-nums text-closing">
-                {impact.events}
-              </span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-[13.5px] text-ink">Unlink announcements referencing this role</span>
-              <span className="font-body text-[13.5px] font-semibold tabular-nums text-closing">
-                {impact.announcements}
-              </span>
-            </div>
-          </div>
 
           <div className="mt-4 flex items-start gap-3 rounded-md border border-rule px-4 py-3.5">
             <div className="flex-1">
               <p className="text-[13.5px] font-medium text-ink">Close it instead?</p>
               <p className="mt-0.5 text-[12.5px] leading-[1.5] text-slate">
-                Closing hides the role from students and keeps every application and offer on record.
+                Closing hides the role from students but keeps it in your regular jobs list,
+                with every application and offer on record.
               </p>
             </div>
             <form action={toggleJobOpen.bind(null, jobId, false)}>
@@ -122,9 +103,9 @@ export function DeleteJobModal({
               <button
                 type="submit"
                 disabled={!canDelete || pending}
-                className="flex h-11 items-center rounded-md bg-closing px-4.5 font-body text-[14px] font-semibold text-white disabled:bg-[#ECEFF3] disabled:text-shut sm:h-10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
+                className="flex h-11 items-center text-[14px] font-semibold text-closing underline underline-offset-2 disabled:text-shut disabled:no-underline sm:h-auto focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
               >
-                {pending ? "Deleting…" : `Delete role and ${impact.applications} applications`}
+                {pending ? "Deleting…" : "Delete role"}
               </button>
             </div>
           </form>

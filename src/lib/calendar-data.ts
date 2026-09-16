@@ -18,7 +18,8 @@ type EventRow = {
   venue: string | null;
   link: string | null;
   job_id: string | null;
-  company: { name: string } | null;
+  company: { name: string; deleted_at: string | null } | null;
+  job: { deleted_at: string | null } | null;
 };
 
 // Shared by /calendar and the dashboard's "This week" card. Job deadlines
@@ -35,6 +36,7 @@ export async function getCalendarEntries(
     supabase
       .from("jobs")
       .select("id, title, deadline, company:companies(name)")
+      .is("deleted_at", null)
       .not("deadline", "is", null)
       .gte("deadline", startUtc)
       .lt("deadline", endUtc)
@@ -42,12 +44,21 @@ export async function getCalendarEntries(
     supabase
       .from("events")
       .select(
-        "id, title, type, starts_at, ends_at, venue, link, job_id, company:companies(name)",
+        "id, title, type, starts_at, ends_at, venue, link, job_id, company:companies(name, deleted_at), job:jobs(deleted_at)",
       )
       .gte("starts_at", startUtc)
       .lt("starts_at", endUtc)
       .overrideTypes<EventRow[], { merge: false }>(),
   ]);
+
+  // Events aren't soft-deletable themselves, but one tied to a job or
+  // company that now is should disappear the same way the deadline entry
+  // above already does -- otherwise "linked events will be hidden" in the
+  // delete confirmation would be a lie for anyone whose RLS grants (i.e.
+  // an admin) would otherwise still show it.
+  const liveEvents = (events ?? []).filter(
+    (event) => !event.job?.deleted_at && !event.company?.deleted_at,
+  );
 
   const deadlineEntries: CalendarEntry[] = (deadlineJobs ?? []).map((job) => ({
     id: `deadline-${job.id}`,
@@ -61,7 +72,7 @@ export async function getCalendarEntries(
     jobId: job.id,
   }));
 
-  const eventEntries: CalendarEntry[] = (events ?? []).map((event) => ({
+  const eventEntries: CalendarEntry[] = liveEvents.map((event) => ({
     id: event.id,
     type: event.type as EventType,
     title: event.title,

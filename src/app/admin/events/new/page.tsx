@@ -11,10 +11,11 @@ export default async function NewEventPage() {
   const { supabase } = await requireAdmin();
 
   const [{ data: companies }, { data: jobs }] = await Promise.all([
-    supabase.from("companies").select("id, name").order("name"),
+    supabase.from("companies").select("id, name").is("deleted_at", null).order("name"),
     supabase
       .from("jobs")
       .select("id, title, company:companies(name)")
+      .is("deleted_at", null)
       .order("title")
       .overrideTypes<JobOption[], { merge: false }>(),
   ]);

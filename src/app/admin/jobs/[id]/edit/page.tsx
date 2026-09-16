@@ -19,7 +19,7 @@ export default async function EditJobPage({
       )
       .eq("id", id)
       .single(),
-    supabase.from("companies").select("id, name").order("name"),
+    supabase.from("companies").select("id, name").is("deleted_at", null).order("name"),
   ]);
 
   if (!job) notFound();
