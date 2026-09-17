@@ -6,7 +6,19 @@ import { requireAdmin } from "@/lib/supabase/require-admin";
 import { istDatetimeLocalToUtcIso } from "@/lib/format";
 import { notifyJobOpened } from "@/lib/notify";
 
-export type JobFormState = { error?: string } | null;
+export type JobFormState =
+  | { error: string }
+  | {
+      success: true;
+      job: {
+        id: string;
+        title: string;
+        companyName: string;
+        location: string | null;
+        deadline: string | null;
+      };
+    }
+  | null;
 
 const MAX_JD_BYTES = 2 * 1024 * 1024;
 
@@ -125,13 +137,36 @@ export async function createJob(
     return { error: `Could not create the job: ${error.message}` };
   }
 
-  if (isOpen && created) {
-    await notifyJobOpened(supabase, created.id);
-  }
-
   revalidatePath("/admin/jobs");
   revalidatePath("/");
   revalidatePath("/events");
+  revalidatePath("/admin");
+
+  if (isOpen && created) {
+    await notifyJobOpened(supabase, created.id);
+    await supabase
+      .from("jobs")
+      .update({ opened_at: new Date().toISOString() })
+      .eq("id", created.id);
+
+    const { data: company } = await supabase
+      .from("companies")
+      .select("name")
+      .eq("id", companyId)
+      .single();
+
+    return {
+      success: true,
+      job: {
+        id: created.id,
+        title,
+        companyName: company?.name ?? "",
+        location: location || null,
+        deadline: deadline.value,
+      },
+    };
+  }
+
   redirect("/admin/jobs");
 }
 
@@ -213,14 +248,38 @@ export async function updateJob(
     await supabase.storage.from("jds").remove([existingJob.jd_path]);
   }
 
-  if (isOpen && !existingJob?.is_open) {
-    await notifyJobOpened(supabase, jobId);
-  }
-
   revalidatePath("/admin/jobs");
   revalidatePath("/");
   revalidatePath(`/jobs/${jobId}`);
   revalidatePath("/events");
+  revalidatePath("/admin");
+
+  const justOpened = isOpen && !existingJob?.is_open;
+  if (justOpened) {
+    await notifyJobOpened(supabase, jobId);
+    await supabase
+      .from("jobs")
+      .update({ opened_at: new Date().toISOString() })
+      .eq("id", jobId);
+
+    const { data: company } = await supabase
+      .from("companies")
+      .select("name")
+      .eq("id", companyId)
+      .single();
+
+    return {
+      success: true,
+      job: {
+        id: jobId,
+        title,
+        companyName: company?.name ?? "",
+        location: location || null,
+        deadline: deadline.value,
+      },
+    };
+  }
+
   redirect("/admin/jobs");
 }
 
@@ -248,12 +307,17 @@ export async function toggleJobOpen(
 
   if (nextIsOpen && !existingJob?.is_open) {
     await notifyJobOpened(supabase, jobId);
+    await supabase
+      .from("jobs")
+      .update({ opened_at: new Date().toISOString() })
+      .eq("id", jobId);
   }
 
   revalidatePath("/admin/jobs");
   revalidatePath("/");
   revalidatePath(`/jobs/${jobId}`);
   revalidatePath("/events");
+  revalidatePath("/admin");
 }
 
 export type DeleteJobState = { error?: string } | null;
@@ -294,5 +358,27 @@ export async function deleteJob(
   revalidatePath("/applications");
   revalidatePath("/events");
   revalidatePath("/announcements");
+  revalidatePath("/admin");
   redirect("/admin/jobs");
+}
+
+// Both copy and open count as "shared" (WhatsAppShare calls this from
+// either action) -- never cleared automatically, so it answers "has this
+// ever been shared," not "was it shared for the most recent change."
+export async function markJobsWhatsAppShared(jobIds: string[]) {
+  const { supabase } = await requireAdmin();
+  if (jobIds.length === 0) return;
+
+  const { error } = await supabase
+    .from("jobs")
+    .update({ whatsapp_shared_at: new Date().toISOString() })
+    .in("id", jobIds);
+  if (error) console.error("markJobsWhatsAppShared: jobs update failed", error);
+
+  revalidatePath("/admin/jobs");
+  revalidatePath("/admin");
+}
+
+export async function markJobWhatsAppShared(jobId: string) {
+  return markJobsWhatsAppShared([jobId]);
 }

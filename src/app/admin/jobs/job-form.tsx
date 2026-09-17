@@ -1,9 +1,13 @@
 "use client";
 
 import { useActionState } from "react";
+import Link from "next/link";
 import { utcIsoToIstDatetimeLocal, getDeadlineUrgency } from "@/lib/format";
+import { fillWhatsAppTemplate } from "@/lib/whatsapp";
+import { absoluteUrl } from "@/lib/site-url";
 import { AdminFormCard } from "@/components/admin-form-card";
-import type { JobFormState } from "./actions";
+import { WhatsAppShare } from "@/components/whatsapp-share";
+import { markJobWhatsAppShared, type JobFormState } from "./actions";
 
 const initialState: JobFormState = null;
 
@@ -26,6 +30,8 @@ export function JobForm({
   action,
   companies,
   defaultValues,
+  whatsappTemplate,
+  totalStudents,
 }: {
   action: (
     prevState: JobFormState,
@@ -33,11 +39,50 @@ export function JobForm({
   ) => Promise<JobFormState>;
   companies: { id: string; name: string }[];
   defaultValues?: JobDefaults;
+  whatsappTemplate: string;
+  totalStudents: number;
 }) {
   const [state, formAction, pending] = useActionState(action, initialState);
 
   const isClosingSoon =
     !!defaultValues?.deadline && getDeadlineUrgency(defaultValues.deadline) === "urgent";
+
+  if (state && "success" in state && state.success) {
+    const message = fillWhatsAppTemplate(whatsappTemplate, {
+      company: state.job.companyName,
+      title: state.job.title,
+      location: state.job.location,
+      deadlineIso: state.job.deadline,
+      link: absoluteUrl(`/jobs/${state.job.id}`),
+      appliedCount: 0,
+      totalStudents,
+    });
+
+    return (
+      <div className="max-w-xl overflow-hidden rounded-xl border border-rule bg-surface shadow-[0_1px_3px_rgba(22,32,46,0.08)]">
+        <div className="border-b border-rule bg-paper px-5.5 py-4.5">
+          <h2 className="font-display text-[19px] font-semibold text-ink">Open for applications</h2>
+          <p className="mt-0.75 text-[12.5px] text-slate">
+            &ldquo;{state.job.title}&rdquo; is live. Share it before it slips past the group.
+          </p>
+        </div>
+        <div className="flex flex-col gap-4 px-5.5 py-5">
+          <WhatsAppShare message={message} onShare={markJobWhatsAppShared.bind(null, state.job.id)} />
+          <div className="flex items-center gap-4">
+            <Link href="/admin/jobs" className="text-[13.5px] font-medium text-navy hover:underline">
+              View jobs
+            </Link>
+            <Link
+              href={`/admin/jobs/${state.job.id}/edit`}
+              className="text-[13.5px] text-slate hover:underline"
+            >
+              Edit this role
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <form action={formAction}>
@@ -47,7 +92,7 @@ export function JobForm({
         cancelHref="/admin/jobs"
         submitLabel={defaultValues ? "Save changes" : "Save and publish"}
         pending={pending}
-        error={state?.error}
+        error={state && "error" in state ? state.error : undefined}
       >
         <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-2">
           <div>

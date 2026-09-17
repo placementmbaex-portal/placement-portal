@@ -3,6 +3,9 @@
 import { useActionState, useEffect, useState } from "react";
 import Link from "next/link";
 import type { Audience } from "@/lib/audience";
+import { fillWhatsAppTemplate } from "@/lib/whatsapp";
+import { absoluteUrl } from "@/lib/site-url";
+import { WhatsAppShare } from "@/components/whatsapp-share";
 import {
   getAudienceCount,
   postAnnouncement,
@@ -10,6 +13,7 @@ import {
   type PostAnnouncementState,
   type StudentSearchResult,
 } from "./actions";
+import { markAnnouncementWhatsAppShared } from "../actions";
 
 const fieldClass =
   "h-10 w-full rounded-md border border-rule px-3 text-[14px] text-ink focus:outline-2 focus:outline-offset-2 focus:outline-ink";
@@ -36,11 +40,13 @@ export function AnnouncementComposer({
   jobs,
   emailMode,
   announcementEmailDefault,
+  whatsappTemplate,
 }: {
   companies: { id: string; name: string }[];
   jobs: { id: string; title: string; companyName: string }[];
   emailMode: "off" | "test" | "live";
   announcementEmailDefault: boolean;
+  whatsappTemplate: string;
 }) {
   const [state, formAction, pending] = useActionState(postAnnouncement, initialState);
 
@@ -129,6 +135,12 @@ export function AnnouncementComposer({
   }
 
   if (state && "success" in state && state.success) {
+    const whatsappMessage = fillWhatsAppTemplate(whatsappTemplate, {
+      title: state.title,
+      excerptSource: state.body,
+      link: absoluteUrl("/announcements"),
+    });
+
     return (
       <div className="max-w-xl overflow-hidden rounded-xl border border-rule bg-surface shadow-[0_1px_3px_rgba(22,32,46,0.08)]">
         <div className="border-b border-rule bg-paper px-5.5 py-4.5">
@@ -151,6 +163,14 @@ export function AnnouncementComposer({
             ) : (
               <p className="mt-1 text-[12.5px] text-slate">Email wasn&apos;t requested for this post.</p>
             )}
+          </div>
+
+          <div>
+            <p className="mb-2 text-[13px] font-semibold text-ink">Share on WhatsApp</p>
+            <WhatsAppShare
+              message={whatsappMessage}
+              onShare={markAnnouncementWhatsAppShared.bind(null, state.announcementId)}
+            />
           </div>
 
           {state.emailOutcomes.length > 0 && (

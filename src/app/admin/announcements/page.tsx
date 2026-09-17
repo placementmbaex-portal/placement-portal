@@ -1,8 +1,17 @@
 import Link from "next/link";
 import { requireAdmin } from "@/lib/supabase/require-admin";
 import { formatDateTimeIST } from "@/lib/format";
+import { absoluteUrl } from "@/lib/site-url";
+import { DEFAULT_WHATSAPP_TEMPLATES, fillWhatsAppTemplate } from "@/lib/whatsapp";
+import { WhatsAppShareModal } from "@/components/whatsapp-share-modal";
+import { NotSharedMarker } from "@/components/not-shared-marker";
 import { RejectDialog } from "./reject-dialog";
-import { approveAnnouncement, togglePin, toggleCommentsLocked } from "./actions";
+import {
+  approveAnnouncement,
+  togglePin,
+  toggleCommentsLocked,
+  markAnnouncementWhatsAppShared,
+} from "./actions";
 
 type AnnouncementRow = {
   id: string;
@@ -12,6 +21,7 @@ type AnnouncementRow = {
   is_pinned: boolean;
   comments_locked: boolean;
   rejection_reason: string | null;
+  whatsapp_shared_at: string | null;
   created_at: string;
   published_at: string | null;
   author: { name: string; roll_no: string | null } | null;
@@ -38,13 +48,19 @@ export default async function AdminAnnouncementsPage({
   const { supabase } = await requireAdmin();
   const { status: statusParam, error } = await searchParams;
 
-  const { data: announcements } = await supabase
-    .from("announcements")
-    .select(
-      "id, title, body, status, is_pinned, comments_locked, rejection_reason, created_at, published_at, author:students(name, roll_no)",
-    )
-    .order("created_at", { ascending: false })
-    .overrideTypes<AnnouncementRow[], { merge: false }>();
+  const [{ data: announcements }, { data: whatsappSetting }] = await Promise.all([
+    supabase
+      .from("announcements")
+      .select(
+        "id, title, body, status, is_pinned, comments_locked, rejection_reason, whatsapp_shared_at, created_at, published_at, author:students(name, roll_no)",
+      )
+      .order("created_at", { ascending: false })
+      .overrideTypes<AnnouncementRow[], { merge: false }>(),
+    supabase.from("app_settings").select("value").eq("key", "whatsapp_template_announcement").single(),
+  ]);
+
+  const whatsappTemplate =
+    (whatsappSetting?.value as string | undefined) ?? DEFAULT_WHATSAPP_TEMPLATES.announcement;
 
   const all = announcements ?? [];
   const pending = all.filter((a) => a.status === "pending");
@@ -171,108 +187,142 @@ export default async function AdminAnnouncementsPage({
                 </tr>
               </thead>
               <tbody>
-                {byTab[activeTab].map((announcement) => (
-                  <tr key={announcement.id} className="border-b border-rule last:border-0">
-                    <td className="px-4 py-2.5 text-ink">{announcement.title}</td>
-                    <td className="px-4 py-2.5 text-slate">{announcement.author?.name}</td>
-                    <td className="px-4 py-2.5 text-slate">
-                      {announcement.status === "approved"
-                        ? announcement.is_pinned
-                          ? "Pinned"
-                          : "Published"
-                        : "Rejected"}
-                    </td>
-                    <td className="px-4 py-2.5 whitespace-nowrap text-slate">
-                      {formatDateTimeIST(announcement.published_at ?? announcement.created_at)}
-                    </td>
-                    <td className="px-4 py-2.5 text-right whitespace-nowrap">
-                      {announcement.status === "approved" ? (
-                        <>
-                          <form
-                            className="inline"
-                            action={togglePin.bind(null, announcement.id, !announcement.is_pinned)}
-                          >
-                            <button
-                              type="submit"
-                              className="text-navy hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
+                {byTab[activeTab].map((announcement) => {
+                  const notShared = announcement.status === "approved" && !announcement.whatsapp_shared_at;
+                  const whatsappMessage = fillWhatsAppTemplate(whatsappTemplate, {
+                    title: announcement.title,
+                    excerptSource: announcement.body,
+                    link: absoluteUrl("/announcements"),
+                  });
+                  return (
+                    <tr key={announcement.id} className="border-b border-rule last:border-0">
+                      <td className="px-4 py-2.5 text-ink">{announcement.title}</td>
+                      <td className="px-4 py-2.5 text-slate">{announcement.author?.name}</td>
+                      <td className="px-4 py-2.5 text-slate">
+                        <span className="inline-flex items-center gap-2">
+                          {announcement.status === "approved"
+                            ? announcement.is_pinned
+                              ? "Pinned"
+                              : "Published"
+                            : "Rejected"}
+                          {notShared && <NotSharedMarker />}
+                        </span>
+                      </td>
+                      <td className="px-4 py-2.5 whitespace-nowrap text-slate">
+                        {formatDateTimeIST(announcement.published_at ?? announcement.created_at)}
+                      </td>
+                      <td className="px-4 py-2.5 text-right whitespace-nowrap">
+                        {announcement.status === "approved" ? (
+                          <>
+                            <form
+                              className="inline"
+                              action={togglePin.bind(null, announcement.id, !announcement.is_pinned)}
                             >
-                              {announcement.is_pinned ? "Unpin" : "Pin"}
-                            </button>
-                          </form>
-                          <span className="text-rule"> | </span>
-                          <form
-                            className="inline"
-                            action={toggleCommentsLocked.bind(
-                              null,
-                              announcement.id,
-                              !announcement.comments_locked,
-                            )}
-                          >
-                            <button
-                              type="submit"
-                              className="text-navy hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
+                              <button
+                                type="submit"
+                                className="text-navy hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
+                              >
+                                {announcement.is_pinned ? "Unpin" : "Pin"}
+                              </button>
+                            </form>
+                            <span className="text-rule"> | </span>
+                            <form
+                              className="inline"
+                              action={toggleCommentsLocked.bind(
+                                null,
+                                announcement.id,
+                                !announcement.comments_locked,
+                              )}
                             >
-                              {announcement.comments_locked ? "Unlock comments" : "Lock comments"}
-                            </button>
-                          </form>
-                        </>
-                      ) : (
-                        <span className="text-slate">{announcement.rejection_reason}</span>
-                      )}
-                    </td>
-                  </tr>
-                ))}
+                              <button
+                                type="submit"
+                                className="text-navy hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
+                              >
+                                {announcement.comments_locked ? "Unlock comments" : "Lock comments"}
+                              </button>
+                            </form>
+                            <span className="text-rule"> | </span>
+                            <WhatsAppShareModal
+                              title={`Share ${announcement.title}`}
+                              message={whatsappMessage}
+                              onShare={markAnnouncementWhatsAppShared.bind(null, announcement.id)}
+                              triggerClassName="text-navy hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
+                            />
+                          </>
+                        ) : (
+                          <span className="text-slate">{announcement.rejection_reason}</span>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
 
           <div className="flex flex-col gap-2.5 sm:hidden">
-            {byTab[activeTab].map((announcement) => (
-              <div key={announcement.id} className="rounded-[14px] border border-rule bg-surface p-4">
-                <div className="flex items-start justify-between gap-2">
-                  <p className="min-w-0 truncate font-medium text-ink">{announcement.title}</p>
-                  <span className="shrink-0 text-[12px] text-slate">
-                    {announcement.status === "approved"
-                      ? announcement.is_pinned
-                        ? "Pinned"
-                        : "Published"
-                      : "Rejected"}
-                  </span>
-                </div>
-                <p className="mt-0.5 text-[12px] text-slate">
-                  {announcement.author?.name} ·{" "}
-                  {formatDateTimeIST(announcement.published_at ?? announcement.created_at)}
-                </p>
-                {announcement.status === "approved" ? (
-                  <div className="mt-2 flex items-center gap-4">
-                    <form action={togglePin.bind(null, announcement.id, !announcement.is_pinned)}>
-                      <button
-                        type="submit"
-                        className="flex h-11 items-center font-body text-[13px] font-medium text-navy focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
-                      >
-                        {announcement.is_pinned ? "Unpin" : "Pin"}
-                      </button>
-                    </form>
-                    <form
-                      action={toggleCommentsLocked.bind(
-                        null,
-                        announcement.id,
-                        !announcement.comments_locked,
-                      )}
-                    >
-                      <button
-                        type="submit"
-                        className="flex h-11 items-center font-body text-[13px] font-medium text-navy focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
-                      >
-                        {announcement.comments_locked ? "Unlock comments" : "Lock comments"}
-                      </button>
-                    </form>
+            {byTab[activeTab].map((announcement) => {
+              const notShared = announcement.status === "approved" && !announcement.whatsapp_shared_at;
+              const whatsappMessage = fillWhatsAppTemplate(whatsappTemplate, {
+                title: announcement.title,
+                excerptSource: announcement.body,
+                link: absoluteUrl("/announcements"),
+              });
+              return (
+                <div key={announcement.id} className="rounded-[14px] border border-rule bg-surface p-4">
+                  <div className="flex items-start justify-between gap-2">
+                    <p className="min-w-0 truncate font-medium text-ink">{announcement.title}</p>
+                    <span className="flex shrink-0 items-center gap-1.5 text-[12px] text-slate">
+                      {announcement.status === "approved"
+                        ? announcement.is_pinned
+                          ? "Pinned"
+                          : "Published"
+                        : "Rejected"}
+                      {notShared && <NotSharedMarker />}
+                    </span>
                   </div>
-                ) : (
-                  <p className="mt-1.5 text-[12.5px] text-slate">{announcement.rejection_reason}</p>
-                )}
-              </div>
-            ))}
+                  <p className="mt-0.5 text-[12px] text-slate">
+                    {announcement.author?.name} ·{" "}
+                    {formatDateTimeIST(announcement.published_at ?? announcement.created_at)}
+                  </p>
+                  {announcement.status === "approved" ? (
+                    <div className="mt-2 flex flex-wrap items-center gap-4">
+                      <form action={togglePin.bind(null, announcement.id, !announcement.is_pinned)}>
+                        <button
+                          type="submit"
+                          className="flex h-11 items-center font-body text-[13px] font-medium text-navy focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
+                        >
+                          {announcement.is_pinned ? "Unpin" : "Pin"}
+                        </button>
+                      </form>
+                      <form
+                        action={toggleCommentsLocked.bind(
+                          null,
+                          announcement.id,
+                          !announcement.comments_locked,
+                        )}
+                      >
+                        <button
+                          type="submit"
+                          className="flex h-11 items-center font-body text-[13px] font-medium text-navy focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
+                        >
+                          {announcement.comments_locked ? "Unlock comments" : "Lock comments"}
+                        </button>
+                      </form>
+                      <WhatsAppShareModal
+                        title={`Share ${announcement.title}`}
+                        message={whatsappMessage}
+                        onShare={markAnnouncementWhatsAppShared.bind(null, announcement.id)}
+                        triggerLabel="Share"
+                        triggerClassName="flex h-11 items-center font-body text-[13px] font-medium text-navy focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
+                      />
+                    </div>
+                  ) : (
+                    <p className="mt-1.5 text-[12.5px] text-slate">{announcement.rejection_reason}</p>
+                  )}
+                </div>
+              );
+            })}
           </div>
         </>
       )}

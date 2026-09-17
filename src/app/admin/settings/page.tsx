@@ -1,7 +1,9 @@
 import { requireAdmin } from "@/lib/supabase/require-admin";
+import { DEFAULT_WHATSAPP_TEMPLATES, WHATSAPP_PLACEHOLDERS } from "@/lib/whatsapp";
 import { EmailModeSelector } from "./email-mode-selector";
 import { TestRecipientsForm } from "./test-recipients-form";
 import { EmailDefaultsForm } from "./email-defaults-form";
+import { WhatsAppTemplateEditor } from "./whatsapp-template-editor";
 
 type AppSettingRow = { key: string; value: unknown };
 
@@ -39,6 +41,13 @@ export default async function SettingsPage() {
   const emailFrom = (byKey.get("email_from") as string | undefined) ?? "placements@yourdomain.com";
   const announcementEmailDefault =
     (byKey.get("announcement_email_default") as boolean | undefined) ?? true;
+  const whatsappJobTemplate =
+    (byKey.get("whatsapp_template_job") as string | undefined) ?? DEFAULT_WHATSAPP_TEMPLATES.job;
+  const whatsappAnnouncementTemplate =
+    (byKey.get("whatsapp_template_announcement") as string | undefined) ??
+    DEFAULT_WHATSAPP_TEMPLATES.announcement;
+  const whatsappReminderTemplate =
+    (byKey.get("whatsapp_template_reminder") as string | undefined) ?? DEFAULT_WHATSAPP_TEMPLATES.reminder;
 
   return (
     <main className="flex flex-col gap-5">
@@ -71,6 +80,37 @@ export default async function SettingsPage() {
 
       <Section title="Defaults">
         <EmailDefaultsForm emailFrom={emailFrom} announcementEmailDefault={announcementEmailDefault} />
+      </Section>
+
+      <Section
+        title="WhatsApp templates"
+        subtitle="Used by the Share on WhatsApp button on jobs, announcements, and the daily digest on Overview."
+      >
+        <p className="mb-4 rounded-md border border-rule bg-paper px-3 py-2 font-mono text-[11.5px] leading-[1.6] text-slate">
+          {WHATSAPP_PLACEHOLDERS.map((p) => `{${p}}`).join("  ")}
+        </p>
+        <div className="flex flex-col gap-6">
+          <WhatsAppTemplateEditor
+            templateKey="whatsapp_template_job"
+            label="New role opened"
+            helpText="Shown after a role is set to open, and from Share on the Jobs list."
+            defaultValue={whatsappJobTemplate}
+          />
+          <div className="h-px bg-rule" />
+          <WhatsAppTemplateEditor
+            templateKey="whatsapp_template_announcement"
+            label="Announcement approved"
+            helpText="Shown after an announcement is approved, and from Share on Announcements."
+            defaultValue={whatsappAnnouncementTemplate}
+          />
+          <div className="h-px bg-rule" />
+          <WhatsAppTemplateEditor
+            templateKey="whatsapp_template_reminder"
+            label="Daily digest line"
+            helpText="One block per role, joined together in the combined message on Overview when 2 or more roles open the same day."
+            defaultValue={whatsappReminderTemplate}
+          />
+        </div>
       </Section>
     </main>
   );

@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { requireAdmin } from "@/lib/supabase/require-admin";
+import { templateDropsLink } from "@/lib/whatsapp";
 
 const EMAIL_MODES = ["off", "test", "live"] as const;
 type EmailMode = (typeof EMAIL_MODES)[number];
@@ -85,4 +86,43 @@ export async function updateEmailDefaults(
 
   revalidatePath("/admin/settings");
   return { success: true };
+}
+
+const WHATSAPP_TEMPLATE_KEYS = [
+  "whatsapp_template_job",
+  "whatsapp_template_announcement",
+  "whatsapp_template_reminder",
+] as const;
+type WhatsAppTemplateKey = (typeof WHATSAPP_TEMPLATE_KEYS)[number];
+
+export type WhatsAppTemplateState = { error?: string; success?: boolean; warning?: string } | null;
+
+export async function updateWhatsAppTemplate(
+  key: WhatsAppTemplateKey,
+  _prevState: WhatsAppTemplateState,
+  formData: FormData,
+): Promise<WhatsAppTemplateState> {
+  const { supabase, user } = await requireAdmin();
+  if (!WHATSAPP_TEMPLATE_KEYS.includes(key)) return { error: "Unknown template." };
+
+  const template = ((formData.get("template") as string) ?? "").trim();
+  if (!template) return { error: "Template can't be empty." };
+
+  const { error } = await upsertSetting(supabase, user.id, key, template);
+  if (error) {
+    console.error("updateWhatsAppTemplate: app_settings upsert failed", error);
+    return { error: `Could not save: ${error.message}` };
+  }
+
+  revalidatePath("/admin/settings");
+  revalidatePath("/admin/jobs");
+  revalidatePath("/admin/announcements");
+  revalidatePath("/admin");
+
+  return {
+    success: true,
+    warning: templateDropsLink(template)
+      ? "This template doesn't include {link} -- shared messages won't link back to the portal."
+      : undefined,
+  };
 }

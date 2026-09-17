@@ -1,4 +1,10 @@
 import { requireAdmin } from "@/lib/supabase/require-admin";
+import { utcIsoToIstDatetimeLocal, istDatetimeLocalToUtcIso } from "@/lib/format";
+import { addDaysToDateKey } from "@/lib/calendar";
+import { absoluteUrl } from "@/lib/site-url";
+import { DEFAULT_WHATSAPP_TEMPLATES, fillWhatsAppTemplate } from "@/lib/whatsapp";
+import { WhatsAppShare } from "@/components/whatsapp-share";
+import { markJobsWhatsAppShared } from "./jobs/actions";
 
 const ATTENTION_WINDOW_HOURS = 48;
 
@@ -9,6 +15,11 @@ export default async function AdminOverviewPage() {
   const attentionWindowEnd = new Date(
     now.getTime() + ATTENTION_WINDOW_HOURS * 60 * 60 * 1000,
   );
+
+  const todayKey = utcIsoToIstDatetimeLocal(now.toISOString()).slice(0, 10);
+  const tomorrowKey = addDaysToDateKey(todayKey, 1);
+  const todayStartUtc = istDatetimeLocalToUtcIso(`${todayKey}T00:00`)!;
+  const todayEndUtc = istDatetimeLocalToUtcIso(`${tomorrowKey}T00:00`)!;
 
   const [
     { count: registeredCount },
@@ -22,6 +33,8 @@ export default async function AdminOverviewPage() {
     { count: pendingAnnouncementCount },
     { count: closingSoonCount },
     { data: openJobs },
+    { data: openedToday },
+    { data: reminderSetting },
   ] = await Promise.all([
     supabase.from("allowed_students").select("id", { count: "exact", head: true }),
     supabase.from("students").select("id", { count: "exact", head: true }),
@@ -62,6 +75,18 @@ export default async function AdminOverviewPage() {
         }[],
         { merge: false }
       >(),
+    supabase
+      .from("jobs")
+      .select("id, title, deadline, company:companies(name)")
+      .is("deleted_at", null)
+      .eq("is_open", true)
+      .gte("opened_at", todayStartUtc)
+      .lt("opened_at", todayEndUtc)
+      .overrideTypes<
+        { id: string; title: string; deadline: string | null; company: { name: string } | null }[],
+        { merge: false }
+      >(),
+    supabase.from("app_settings").select("value").eq("key", "whatsapp_template_reminder").single(),
   ]);
 
   const cvUploaderCount = new Set((cvOwners ?? []).map((r) => r.student_id)).size;
@@ -88,6 +113,23 @@ export default async function AdminOverviewPage() {
 
   const registered = registeredCount ?? 0;
   const signedIn = signedInCount ?? 0;
+
+  const jobsOpenedToday = openedToday ?? [];
+  const reminderTemplate =
+    (reminderSetting?.value as string | undefined) ?? DEFAULT_WHATSAPP_TEMPLATES.reminder;
+  const digestMessage =
+    jobsOpenedToday.length >= 2
+      ? `${jobsOpenedToday.length} new roles opened today:\n\n${jobsOpenedToday
+          .map((job) =>
+            fillWhatsAppTemplate(reminderTemplate, {
+              company: job.company?.name,
+              title: job.title,
+              deadlineIso: job.deadline,
+              link: absoluteUrl(`/jobs/${job.id}`),
+            }),
+          )
+          .join("\n\n")}`
+      : null;
 
   const attention = [
     { label: "Announcements pending approval", value: pendingAnnouncementCount ?? 0 },
@@ -188,6 +230,27 @@ export default async function AdminOverviewPage() {
           </div>
         </div>
       </div>
+
+      {digestMessage && (
+        <div className="rounded-xl border border-rule bg-surface p-4.5">
+          <p className="font-body text-[11px] font-semibold tracking-[0.09em] text-slate uppercase">
+            WhatsApp digest
+          </p>
+          <p className="mt-1.5 text-[13.5px] leading-[1.5] text-ink">
+            {jobsOpenedToday.length} roles opened today — share them together instead of one at a
+            time.
+          </p>
+          <div className="mt-3.5">
+            <WhatsAppShare
+              message={digestMessage}
+              onShare={markJobsWhatsAppShared.bind(
+                null,
+                jobsOpenedToday.map((j) => j.id),
+              )}
+            />
+          </div>
+        </div>
+      )}
 
       <div>
         <div className="flex items-baseline justify-between">

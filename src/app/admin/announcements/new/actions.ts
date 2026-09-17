@@ -43,7 +43,9 @@ export type PostAnnouncementState =
   | { error: string }
   | {
       success: true;
+      announcementId: string;
       title: string;
+      body: string;
       recipientCount: number;
       emailAttempted: boolean;
       skippedForEmailToggle: number;
@@ -122,7 +124,9 @@ export async function postAnnouncement(
 
   return {
     success: true,
+    announcementId: created.id,
     title: created.title,
+    body: parsed.body,
     recipientCount: studentIds.length,
     emailAttempted: sendEmailFlag,
     skippedForEmailToggle: result.skippedForEmailToggle,

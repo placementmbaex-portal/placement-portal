@@ -1,13 +1,20 @@
 import Link from "next/link";
 import { requireAdmin } from "@/lib/supabase/require-admin";
 import { formatDateTimeIST, getDeadlineUrgency } from "@/lib/format";
+import { absoluteUrl } from "@/lib/site-url";
+import { DEFAULT_WHATSAPP_TEMPLATES, fillWhatsAppTemplate } from "@/lib/whatsapp";
+import { WhatsAppShareModal } from "@/components/whatsapp-share-modal";
+import { NotSharedMarker } from "@/components/not-shared-marker";
 import { JobRowMenu } from "./job-row-menu";
+import { markJobWhatsAppShared } from "./actions";
 
 type JobRow = {
   id: string;
   title: string;
+  location: string | null;
   deadline: string | null;
   is_open: boolean;
+  whatsapp_shared_at: string | null;
   company: { id: string; name: string } | null;
 };
 
@@ -31,15 +38,20 @@ export default async function AdminJobsPage({
     : "all";
   const query = (q ?? "").trim().toLowerCase();
 
-  const [{ data: jobs }, { data: applications }] = await Promise.all([
-    supabase
-      .from("jobs")
-      .select("id, title, deadline, is_open, company:companies(id, name)")
-      .is("deleted_at", null)
-      .order("created_at", { ascending: false })
-      .overrideTypes<JobRow[], { merge: false }>(),
-    supabase.from("applications").select("job_id, status"),
-  ]);
+  const [{ data: jobs }, { data: applications }, { data: whatsappSetting }, { count: totalStudents }] =
+    await Promise.all([
+      supabase
+        .from("jobs")
+        .select("id, title, location, deadline, is_open, whatsapp_shared_at, company:companies(id, name)")
+        .is("deleted_at", null)
+        .order("created_at", { ascending: false })
+        .overrideTypes<JobRow[], { merge: false }>(),
+      supabase.from("applications").select("job_id, status"),
+      supabase.from("app_settings").select("value").eq("key", "whatsapp_template_job").single(),
+      supabase.from("allowed_students").select("email", { count: "exact", head: true }),
+    ]);
+
+  const whatsappTemplate = (whatsappSetting?.value as string | undefined) ?? DEFAULT_WHATSAPP_TEMPLATES.job;
 
   const applicantCounts = new Map<string, number>();
   for (const application of applications ?? []) {
@@ -155,6 +167,16 @@ export default async function AdminJobsPage({
                 {filtered.map((job) => {
                   const urgency = getDeadlineUrgency(job.is_open ? job.deadline : null);
                   const barColor = job.is_open ? URGENCY_COLOR[urgency] : URGENCY_COLOR.shut;
+                  const notShared = job.is_open && !job.whatsapp_shared_at;
+                  const whatsappMessage = fillWhatsAppTemplate(whatsappTemplate, {
+                    company: job.company?.name,
+                    title: job.title,
+                    location: job.location,
+                    deadlineIso: job.deadline,
+                    link: absoluteUrl(`/jobs/${job.id}`),
+                    appliedCount: applicantCounts.get(job.id) ?? 0,
+                    totalStudents: totalStudents ?? 0,
+                  });
                   return (
                     <tr key={job.id} className="h-12 border-b border-rule last:border-0">
                       <td className="px-4 whitespace-nowrap text-ink">
@@ -176,15 +198,18 @@ export default async function AdminJobsPage({
                         {job.deadline ? formatDateTimeIST(job.deadline) : "—"}
                       </td>
                       <td className="px-4">
-                        <span
-                          className="inline-flex items-center gap-1.5 font-body text-[12.5px] font-medium"
-                          style={{ color: job.is_open ? "#0F7B54" : "#5A6675" }}
-                        >
+                        <span className="inline-flex items-center gap-2">
                           <span
-                            className="h-1.75 w-1.75 rounded-full"
-                            style={{ backgroundColor: job.is_open ? "#0F7B54" : "#8B94A3" }}
-                          />
-                          {job.is_open ? "Open" : "Closed"}
+                            className="inline-flex items-center gap-1.5 font-body text-[12.5px] font-medium"
+                            style={{ color: job.is_open ? "#0F7B54" : "#5A6675" }}
+                          >
+                            <span
+                              className="h-1.75 w-1.75 rounded-full"
+                              style={{ backgroundColor: job.is_open ? "#0F7B54" : "#8B94A3" }}
+                            />
+                            {job.is_open ? "Open" : "Closed"}
+                          </span>
+                          {notShared && <NotSharedMarker />}
                         </span>
                       </td>
                       <td className="px-4 text-right tabular-nums">
@@ -210,6 +235,13 @@ export default async function AdminJobsPage({
                           Edit
                         </Link>
                         <span className="mx-2 text-rule">|</span>
+                        <WhatsAppShareModal
+                          title={`Share ${job.title}`}
+                          message={whatsappMessage}
+                          onShare={markJobWhatsAppShared.bind(null, job.id)}
+                          triggerClassName="text-navy focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
+                        />
+                        <span className="mx-2 text-rule">|</span>
                         <JobRowMenu
                           jobId={job.id}
                           jobTitle={job.title}
@@ -230,6 +262,16 @@ export default async function AdminJobsPage({
               const urgency = getDeadlineUrgency(job.is_open ? job.deadline : null);
               const barColor = job.is_open ? URGENCY_COLOR[urgency] : URGENCY_COLOR.shut;
               const applicantCount = applicantCounts.get(job.id) ?? 0;
+              const notShared = job.is_open && !job.whatsapp_shared_at;
+              const whatsappMessage = fillWhatsAppTemplate(whatsappTemplate, {
+                company: job.company?.name,
+                title: job.title,
+                location: job.location,
+                deadlineIso: job.deadline,
+                link: absoluteUrl(`/jobs/${job.id}`),
+                appliedCount: applicantCount,
+                totalStudents: totalStudents ?? 0,
+              });
               return (
                 <div
                   key={job.id}
@@ -255,6 +297,7 @@ export default async function AdminJobsPage({
                         />
                         {job.is_open ? "Open" : "Closed"}
                       </span>
+                      {notShared && <NotSharedMarker />}
                       <span className="text-rule">·</span>
                       <span
                         className="tabular-nums"
@@ -279,6 +322,13 @@ export default async function AdminJobsPage({
                         >
                           Edit
                         </Link>
+                        <WhatsAppShareModal
+                          title={`Share ${job.title}`}
+                          message={whatsappMessage}
+                          onShare={markJobWhatsAppShared.bind(null, job.id)}
+                          triggerLabel="Share"
+                          triggerClassName="flex h-11 items-center px-2 font-body text-[13px] font-medium text-navy focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
+                        />
                         <JobRowMenu
                           jobId={job.id}
                           jobTitle={job.title}

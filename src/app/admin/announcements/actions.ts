@@ -128,3 +128,18 @@ export async function toggleCommentsLocked(
   revalidatePath("/");
   revalidatePath("/announcements");
 }
+
+// Both copy and open count as "shared" (WhatsAppShare calls this from
+// either action) -- never cleared automatically, so it answers "has this
+// ever been shared," not "was it shared for the most recent change."
+export async function markAnnouncementWhatsAppShared(id: string) {
+  const { supabase } = await requireAdmin();
+
+  const { error } = await supabase
+    .from("announcements")
+    .update({ whatsapp_shared_at: new Date().toISOString() })
+    .eq("id", id);
+  if (error) console.error("markAnnouncementWhatsAppShared: announcements update failed", error);
+
+  revalidatePath("/admin/announcements");
+}
