@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { requireAdmin } from "@/lib/supabase/require-admin";
+import { SettingsSubNav } from "@/components/settings-subnav";
 import { formatDateTimeIST, formatRelativeTime } from "@/lib/format";
 import { AdminToggle } from "./admin-toggle";
 import { AddAllowlistForm, BulkAddAllowlistForm, RemoveAllowlistButton } from "./allowlist-forms";
@@ -138,6 +139,7 @@ export default async function AdminStudentsPage({
 
   return (
     <main className="flex flex-col gap-8">
+      <SettingsSubNav />
       <div className="flex flex-col gap-5">
         <div>
           <p className="font-body text-[10.5px] font-semibold tracking-[0.1em] text-slate uppercase">

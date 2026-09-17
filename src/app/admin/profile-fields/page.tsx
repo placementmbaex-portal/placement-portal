@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { requireAdmin } from "@/lib/supabase/require-admin";
+import { SettingsSubNav } from "@/components/settings-subnav";
 import { FieldsTable } from "./fields-table";
 
 export type ProfileFieldRow = {
@@ -37,6 +38,7 @@ export default async function ProfileFieldsPage() {
 
   return (
     <main className="flex flex-col gap-5">
+      <SettingsSubNav />
       <div className="flex items-center justify-between gap-4">
         <div>
           <p className="font-body text-[10.5px] font-semibold tracking-[0.1em] text-slate uppercase">

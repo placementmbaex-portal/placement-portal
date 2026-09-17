@@ -1,4 +1,5 @@
 import { requireAdmin } from "@/lib/supabase/require-admin";
+import { SettingsSubNav } from "@/components/settings-subnav";
 import { DEFAULT_WHATSAPP_TEMPLATES, WHATSAPP_PLACEHOLDERS } from "@/lib/whatsapp";
 import { EmailModeSelector } from "./email-mode-selector";
 import { TestRecipientsForm } from "./test-recipients-form";
@@ -51,6 +52,7 @@ export default async function SettingsPage() {
 
   return (
     <main className="flex flex-col gap-5">
+      <SettingsSubNav />
       <div>
         <p className="font-body text-[10.5px] font-semibold tracking-[0.1em] text-slate uppercase">
           Email mode: {mode}
