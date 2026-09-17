@@ -34,32 +34,34 @@ export async function Header() {
   return (
     <>
       {student?.is_admin && <CrossPortalBanner />}
-      <header className="sticky top-0 z-10 flex h-14 items-center gap-3 border-b border-rule bg-surface px-5">
-        <Image
-          src="/logo-iimc.svg"
-          alt="IIM Calcutta"
-          width={28}
-          height={28}
-          className="h-7 w-7 object-contain"
-        />
-        <span className="h-[22px] w-px bg-rule" />
-        <span className="font-body text-[17px] font-bold tracking-[-0.01em] text-navy">
-          MBA<span className="text-flame">Ex</span>
-        </span>
-        <span className="flex-1" />
-        <Link
-          href="/applications"
-          className="text-[13px] font-medium text-navy focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
-        >
-          Applications
-        </Link>
-        <NotificationBell notifications={notifications ?? []} unreadCount={unreadCount ?? 0} />
-        <UserMenu
-          name={student?.name ?? "?"}
-          email={student?.email ?? ""}
-          isAdmin={student?.is_admin ?? false}
-          onAdminSide={false}
-        />
+      <header className="sticky top-0 z-10 border-b border-rule bg-surface pt-[env(safe-area-inset-top)]">
+        <div className="flex h-14 items-center gap-3 px-5">
+          <Image
+            src="/logo-iimc.svg"
+            alt="IIM Calcutta"
+            width={28}
+            height={28}
+            className="h-7 w-7 object-contain"
+          />
+          <span className="h-[22px] w-px bg-rule" />
+          <span className="font-body text-[17px] font-bold tracking-[-0.01em] text-navy">
+            MBA<span className="text-flame">Ex</span>
+          </span>
+          <span className="flex-1" />
+          <Link
+            href="/applications"
+            className="text-[13px] font-medium text-navy focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
+          >
+            Applications
+          </Link>
+          <NotificationBell notifications={notifications ?? []} unreadCount={unreadCount ?? 0} />
+          <UserMenu
+            name={student?.name ?? "?"}
+            email={student?.email ?? ""}
+            isAdmin={student?.is_admin ?? false}
+            onAdminSide={false}
+          />
+        </div>
       </header>
     </>
   );

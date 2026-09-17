@@ -8,6 +8,12 @@ export function proxy(request: NextRequest) {
 
 export const config = {
   matcher: [
-    "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
+    // manifest.webmanifest must be publicly fetchable for "Add to Home
+    // Screen" to work at all -- there's no user session to check it
+    // against. api/ is excluded too: its one route (the deadline-reminder
+    // cron) authenticates itself via CRON_SECRET, has no user cookies to
+    // refresh, and was otherwise being redirected to /login before its
+    // own check ever ran.
+    "/((?!_next/static|_next/image|favicon.ico|manifest.webmanifest|api/|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
   ],
 };
