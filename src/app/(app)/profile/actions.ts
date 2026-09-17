@@ -179,7 +179,7 @@ export async function deleteCv(cvId: string, _formData: FormData) {
   revalidatePath("/profile");
 }
 
-export type UpdateEmailNotificationsResult = { error?: string; debug?: string } | null;
+export type UpdateEmailNotificationsResult = { error?: string } | null;
 
 // students.email_notifications isn't in guard_student_update's reset list
 // for non-admins (schema_r3.sql), so this write goes straight through RLS
@@ -193,11 +193,10 @@ export async function updateEmailNotifications(
   } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
-  const { data, error } = await supabase
+  const { error } = await supabase
     .from("students")
     .update({ email_notifications: next })
-    .eq("id", user.id)
-    .select("id, email_notifications");
+    .eq("id", user.id);
 
   if (error) {
     console.error("updateEmailNotifications: students update failed", error);
@@ -205,7 +204,7 @@ export async function updateEmailNotifications(
   }
 
   revalidatePath("/profile");
-  return { debug: JSON.stringify({ userId: user.id, next, returned: data }) };
+  return null;
 }
 
 export async function viewCv(cvId: string, _formData: FormData) {

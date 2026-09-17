@@ -29,8 +29,6 @@ export function EmailNotificationsToggle({ enabled }: { enabled: boolean }) {
               if (result?.error) {
                 setChecked(!next);
                 setError(result.error);
-              } else if (result?.debug) {
-                setError(result.debug);
               }
             });
           }}
