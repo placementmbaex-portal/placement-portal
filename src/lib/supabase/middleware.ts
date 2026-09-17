@@ -1,5 +1,6 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
+import { isSafeRedirectPath } from "@/lib/safe-redirect";
 
 const PUBLIC_PATHS = ["/login", "/auth/callback"];
 
@@ -37,17 +38,22 @@ export async function updateSession(request: NextRequest) {
   const isPublicPath = PUBLIC_PATHS.some((path) => pathname.startsWith(path));
 
   if (!user && !isPublicPath) {
+    // The full path the student was actually trying to reach -- captured
+    // before this URL gets rewritten to /login -- so GoogleSignInButton
+    // can carry it through the OAuth round trip (see its own comment) and
+    // land them back on, say, /jobs/<id> instead of the dashboard.
+    const intended = pathname + request.nextUrl.search;
     const url = request.nextUrl.clone();
     url.pathname = "/login";
     url.search = "";
+    if (intended !== "/") url.searchParams.set("next", intended);
     return NextResponse.redirect(url);
   }
 
   if (user && pathname === "/login") {
-    const url = request.nextUrl.clone();
-    url.pathname = "/";
-    url.search = "";
-    return NextResponse.redirect(url);
+    const next = request.nextUrl.searchParams.get("next");
+    const destination = isSafeRedirectPath(next) ? next : "/";
+    return NextResponse.redirect(new URL(destination, request.url));
   }
 
   if (user && pathname.startsWith("/admin")) {

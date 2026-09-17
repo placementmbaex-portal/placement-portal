@@ -2,12 +2,16 @@
 
 import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { POST_LOGIN_REDIRECT_COOKIE } from "@/lib/safe-redirect";
 
-export function GoogleSignInButton() {
+export function GoogleSignInButton({ next }: { next?: string }) {
   const [pending, setPending] = useState(false);
 
   async function handleSignIn() {
     setPending(true);
+    if (next) {
+      document.cookie = `${POST_LOGIN_REDIRECT_COOKIE}=${encodeURIComponent(next)}; path=/; max-age=600; SameSite=Lax`;
+    }
     const supabase = createClient();
     await supabase.auth.signInWithOAuth({
       provider: "google",

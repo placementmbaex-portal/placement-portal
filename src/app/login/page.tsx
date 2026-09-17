@@ -4,10 +4,11 @@ import { GoogleSignInButton } from "@/components/google-sign-in-button";
 export default async function LoginPage({
   searchParams,
 }: {
-  searchParams: Promise<{ error?: string | string[] }>;
+  searchParams: Promise<{ error?: string | string[]; next?: string | string[] }>;
 }) {
-  const { error } = await searchParams;
+  const { error, next } = await searchParams;
   const message = Array.isArray(error) ? error[0] : error;
+  const nextPath = Array.isArray(next) ? next[0] : next;
 
   return (
     <div className="flex min-h-dvh flex-col items-center justify-center bg-paper px-4">
@@ -35,7 +36,7 @@ export default async function LoginPage({
           </p>
         )}
 
-        <GoogleSignInButton />
+        <GoogleSignInButton next={nextPath} />
 
         <p className="mt-4 text-[11.5px] leading-[1.5] text-shut">
           Only @email.iimcal.ac.in accounts are accepted.
