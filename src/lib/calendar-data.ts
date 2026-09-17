@@ -22,7 +22,7 @@ type EventRow = {
   job: { deleted_at: string | null } | null;
 };
 
-// Shared by /calendar and the dashboard's "This week" card. Job deadlines
+// Shared by /events and the dashboard's "This week" card. Job deadlines
 // are queried live from jobs.deadline (never a stored copy — see the
 // events table's own comment in schema.sql), merged with admin-created
 // events the RLS policy already scopes to what this viewer may see.

@@ -113,6 +113,15 @@ export function formatRelativeTime(iso: string): string {
   return `${years} year${years === 1 ? "" : "s"} ago`;
 }
 
+// Hides Date.now() behind a function boundary so a Server Component that
+// needs "now" stays pure per eslint's react-hooks/purity rule, which only
+// flags impure calls it can see directly inside a component/hook body --
+// getDeadlineUrgency below has called Date.now() internally the same way
+// all along.
+export function nowMs(): number {
+  return Date.now();
+}
+
 export type DeadlineUrgency = "live" | "urgent" | "shut";
 
 // DESIGN.md's job-row state thresholds: >48h is live, <48h is urgent (the

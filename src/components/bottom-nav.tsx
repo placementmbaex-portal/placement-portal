@@ -31,7 +31,7 @@ const TABS: { href: string; label: string; icon: ReactNode }[] = [
     ),
   },
   {
-    href: "/calendar",
+    href: "/events",
     label: "Calendar",
     icon: (
       <>

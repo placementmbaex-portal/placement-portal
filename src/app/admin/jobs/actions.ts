@@ -131,6 +131,7 @@ export async function createJob(
 
   revalidatePath("/admin/jobs");
   revalidatePath("/");
+  revalidatePath("/events");
   redirect("/admin/jobs");
 }
 
@@ -219,6 +220,7 @@ export async function updateJob(
   revalidatePath("/admin/jobs");
   revalidatePath("/");
   revalidatePath(`/jobs/${jobId}`);
+  revalidatePath("/events");
   redirect("/admin/jobs");
 }
 
@@ -251,6 +253,7 @@ export async function toggleJobOpen(
   revalidatePath("/admin/jobs");
   revalidatePath("/");
   revalidatePath(`/jobs/${jobId}`);
+  revalidatePath("/events");
 }
 
 export type DeleteJobState = { error?: string } | null;
@@ -289,7 +292,7 @@ export async function deleteJob(
   revalidatePath("/");
   revalidatePath("/jobs");
   revalidatePath("/applications");
-  revalidatePath("/calendar");
+  revalidatePath("/events");
   revalidatePath("/announcements");
   redirect("/admin/jobs");
 }

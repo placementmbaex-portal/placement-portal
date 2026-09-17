@@ -1,5 +1,6 @@
 import { requireAdmin } from "@/lib/supabase/require-admin";
 import { EventForm } from "../event-form";
+import { createEvent } from "../actions";
 
 type JobOption = {
   id: string;
@@ -28,7 +29,7 @@ export default async function NewEventPage() {
 
   return (
     <main>
-      <EventForm companies={companies ?? []} jobs={jobOptions} />
+      <EventForm action={createEvent} companies={companies ?? []} jobs={jobOptions} />
     </main>
   );
 }
