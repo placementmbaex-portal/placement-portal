@@ -1,26 +1,19 @@
 "use client";
 
 import { useActionState } from "react";
-import { updateEmailDefaults, type EmailDefaultsState } from "./actions";
+import { updateEmailFrom, type EmailFromState } from "./actions";
 
-const initialState: EmailDefaultsState = null;
+const initialState: EmailFromState = null;
 const fieldClass =
   "h-10 w-full rounded-md border border-rule px-3 text-[14px] text-ink focus:outline-2 focus:outline-offset-2 focus:outline-ink";
-const labelClass = "mb-1.5 block text-[12.5px] text-slate";
 
-export function EmailDefaultsForm({
-  emailFrom,
-  announcementEmailDefault,
-}: {
-  emailFrom: string;
-  announcementEmailDefault: boolean;
-}) {
-  const [state, formAction, pending] = useActionState(updateEmailDefaults, initialState);
+export function EmailFromForm({ emailFrom }: { emailFrom: string }) {
+  const [state, formAction, pending] = useActionState(updateEmailFrom, initialState);
 
   return (
     <form action={formAction} className="flex flex-col gap-3.5">
       <div className="max-w-sm">
-        <label htmlFor="email_from" className={labelClass}>
+        <label htmlFor="email_from" className="mb-1.5 block text-[12.5px] text-slate">
           From-address
         </label>
         <input
@@ -33,17 +26,6 @@ export function EmailDefaultsForm({
         />
         <p className="mt-1.25 text-[11.5px] text-shut">Must be on a domain verified with Resend.</p>
       </div>
-
-      <label className="flex items-center gap-2.5 text-[14px] text-ink">
-        <input
-          type="checkbox"
-          name="announcement_email_default"
-          defaultChecked={announcementEmailDefault}
-          className="h-4 w-4"
-        />
-        Notify students by email when an announcement is approved, by default
-      </label>
-
       <div>
         <button
           type="submit"

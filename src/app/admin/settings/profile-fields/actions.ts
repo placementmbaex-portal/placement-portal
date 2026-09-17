@@ -76,8 +76,8 @@ export async function createProfileField(
     return { error: `Could not create the field: ${error.message}` };
   }
 
-  revalidatePath("/admin/profile-fields");
-  redirect("/admin/profile-fields");
+  revalidatePath("/admin/settings/profile-fields");
+  redirect("/admin/settings/profile-fields");
 }
 
 export async function updateProfileField(
@@ -111,8 +111,8 @@ export async function updateProfileField(
     return { error: `Could not save changes: ${error.message}` };
   }
 
-  revalidatePath("/admin/profile-fields");
-  redirect("/admin/profile-fields");
+  revalidatePath("/admin/settings/profile-fields");
+  redirect("/admin/settings/profile-fields");
 }
 
 export async function deleteProfileField(fieldKey: string, _formData: FormData) {
@@ -127,7 +127,7 @@ export async function deleteProfileField(fieldKey: string, _formData: FormData) 
     console.error("deleteProfileField: delete failed", error);
   }
 
-  revalidatePath("/admin/profile-fields");
+  revalidatePath("/admin/settings/profile-fields");
 }
 
 export type ToggleColumn = "student_visible" | "student_editable" | "include_in_export";
@@ -149,7 +149,7 @@ export async function toggleProfileFieldFlag(
     return { error: error.message };
   }
 
-  revalidatePath("/admin/profile-fields");
+  revalidatePath("/admin/settings/profile-fields");
   return null;
 }
 
@@ -173,6 +173,6 @@ export async function reorderProfileFields(
     return { error: failed.error.message };
   }
 
-  revalidatePath("/admin/profile-fields");
+  revalidatePath("/admin/settings/profile-fields");
   return null;
 }

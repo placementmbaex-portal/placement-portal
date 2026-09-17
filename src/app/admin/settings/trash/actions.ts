@@ -46,7 +46,7 @@ export async function restoreCompany(
 
   revalidatePath("/admin/companies");
   revalidatePath("/admin/jobs");
-  revalidatePath("/admin/trash");
+  revalidatePath("/admin/settings/trash");
   revalidatePath("/");
   return null;
 }
@@ -80,15 +80,47 @@ export async function restoreJob(
   }
 
   revalidatePath("/admin/jobs");
-  revalidatePath("/admin/trash");
+  revalidatePath("/admin/settings/trash");
   revalidatePath("/");
   revalidatePath("/jobs");
   return null;
 }
 
+export async function restoreAnnouncement(
+  announcementId: string,
+  _prevState: RestoreState,
+  _formData: FormData,
+): Promise<RestoreState> {
+  const { supabase } = await requireAdmin();
+
+  const { data: announcement } = await supabase
+    .from("announcements")
+    .select("deleted_at")
+    .eq("id", announcementId)
+    .single();
+
+  if (!announcement?.deleted_at) return { error: "This announcement isn't in trash." };
+
+  const { error } = await supabase
+    .from("announcements")
+    .update({ deleted_at: null, deleted_by: null })
+    .eq("id", announcementId);
+
+  if (error) {
+    console.error("restoreAnnouncement: announcements update failed", error);
+    return { error: `Could not restore the announcement: ${error.message}` };
+  }
+
+  revalidatePath("/admin/announcements");
+  revalidatePath("/admin/settings/trash");
+  revalidatePath("/");
+  revalidatePath("/announcements");
+  return null;
+}
+
 export type PermanentDeleteState = { error?: string } | null;
 
-// Real DELETEs. Only ever reachable from /admin/trash, and only once
+// Real DELETEs. Only ever reachable from /admin/settings/trash, and only once
 // deletion_impact reports zero applications -- re-checked here, not just
 // trusted from the list that rendered the button.
 export async function permanentlyDeleteCompany(
@@ -135,9 +167,9 @@ export async function permanentlyDeleteCompany(
     return { error: `Could not permanently delete: ${error.message}` };
   }
 
-  revalidatePath("/admin/trash");
+  revalidatePath("/admin/settings/trash");
   revalidatePath("/admin/companies");
-  redirect("/admin/trash");
+  redirect("/admin/settings/trash");
 }
 
 export async function permanentlyDeleteJob(
@@ -188,7 +220,7 @@ export async function permanentlyDeleteJob(
     await supabase.storage.from("jds").remove([job.jd_path]);
   }
 
-  revalidatePath("/admin/trash");
+  revalidatePath("/admin/settings/trash");
   revalidatePath("/admin/jobs");
-  redirect("/admin/trash");
+  redirect("/admin/settings/trash");
 }

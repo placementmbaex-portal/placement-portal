@@ -5,12 +5,14 @@ import { absoluteUrl } from "@/lib/site-url";
 import { DEFAULT_WHATSAPP_TEMPLATES, fillWhatsAppTemplate } from "@/lib/whatsapp";
 import { WhatsAppShareModal } from "@/components/whatsapp-share-modal";
 import { NotSharedMarker } from "@/components/not-shared-marker";
+import { ConfirmSubmitButton } from "@/components/confirm-submit-button";
 import { RejectDialog } from "./reject-dialog";
 import {
   approveAnnouncement,
   togglePin,
   toggleCommentsLocked,
   markAnnouncementWhatsAppShared,
+  deleteAnnouncement,
 } from "./actions";
 
 type AnnouncementRow = {
@@ -248,10 +250,20 @@ export default async function AdminAnnouncementsPage({
                               onShare={markAnnouncementWhatsAppShared.bind(null, announcement.id)}
                               triggerClassName="text-navy hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
                             />
+                            <span className="text-rule"> | </span>
                           </>
                         ) : (
-                          <span className="text-slate">{announcement.rejection_reason}</span>
+                          <span className="mr-2 text-slate">{announcement.rejection_reason}</span>
                         )}
+                        <form className="inline" action={deleteAnnouncement.bind(null, announcement.id)}>
+                          <ConfirmSubmitButton
+                            confirmMessage={`Delete "${announcement.title}"? It can be restored from Trash.`}
+                            pendingLabel="Deleting…"
+                            className="text-closing hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink disabled:opacity-60"
+                          >
+                            Delete
+                          </ConfirmSubmitButton>
+                        </form>
                       </td>
                     </tr>
                   );
@@ -320,6 +332,15 @@ export default async function AdminAnnouncementsPage({
                   ) : (
                     <p className="mt-1.5 text-[12.5px] text-slate">{announcement.rejection_reason}</p>
                   )}
+                  <form action={deleteAnnouncement.bind(null, announcement.id)}>
+                    <ConfirmSubmitButton
+                      confirmMessage={`Delete "${announcement.title}"? It can be restored from Trash.`}
+                      pendingLabel="Deleting…"
+                      className="flex h-11 items-center font-body text-[13px] font-medium text-closing disabled:opacity-60"
+                    >
+                      Delete
+                    </ConfirmSubmitButton>
+                  </form>
                 </div>
               );
             })}

@@ -116,7 +116,7 @@ export async function deleteCompany(
 
   revalidatePath("/admin/companies");
   revalidatePath("/admin/jobs");
-  revalidatePath("/admin/trash");
+  revalidatePath("/admin/settings/trash");
   revalidatePath("/");
   revalidatePath("/jobs");
   revalidatePath(`/companies/${companyId}`);

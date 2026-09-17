@@ -325,7 +325,7 @@ export type DeleteJobState = { error?: string } | null;
 // Soft delete only -- a real DELETE cascades to applications and events
 // (schema.sql's FKs) and would destroy application history. Setting
 // deleted_at/deleted_by hides the role from every list and from RLS
-// (jobs_read) without touching a single other row; /admin/trash is where
+// (jobs_read) without touching a single other row; /admin/settings/trash is where
 // it can be restored or, once it has zero applications, hard-deleted for
 // real.
 export async function deleteJob(
@@ -352,7 +352,7 @@ export async function deleteJob(
   }
 
   revalidatePath("/admin/jobs");
-  revalidatePath("/admin/trash");
+  revalidatePath("/admin/settings/trash");
   revalidatePath("/");
   revalidatePath("/jobs");
   revalidatePath("/applications");

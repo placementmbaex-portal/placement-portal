@@ -204,7 +204,7 @@ export function AnnouncementComposer({
             <Link href="/admin/announcements" className="text-[13.5px] font-medium text-navy hover:underline">
               View announcements
             </Link>
-            <Link href="/admin/email-log" className="text-[13.5px] font-medium text-navy hover:underline">
+            <Link href="/admin/settings/email-log" className="text-[13.5px] font-medium text-navy hover:underline">
               View full email log
             </Link>
             <a href="/admin/announcements/new" className="text-[13.5px] text-slate hover:underline">

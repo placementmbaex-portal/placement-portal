@@ -61,7 +61,7 @@ export function FieldForm({
       <AdminFormCard
         title={isEditing ? "Edit profile field" : "Add a profile field"}
         subtitle="Values students have already saved for other fields are untouched."
-        cancelHref="/admin/profile-fields"
+        cancelHref="/admin/settings/profile-fields"
         submitLabel={isEditing ? "Save changes" : "Add field"}
         pending={pending}
         error={state?.error}

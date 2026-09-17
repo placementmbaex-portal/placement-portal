@@ -1,12 +1,13 @@
 "use client";
 
 import { useActionState } from "react";
-import { restoreCompany, restoreJob, type RestoreState } from "./actions";
+import { restoreCompany, restoreJob, restoreAnnouncement, type RestoreState } from "./actions";
 
 const initialState: RestoreState = null;
 
-export function RestoreButton({ kind, id }: { kind: "company" | "job"; id: string }) {
-  const action = kind === "company" ? restoreCompany : restoreJob;
+export function RestoreButton({ kind, id }: { kind: "company" | "job" | "announcement"; id: string }) {
+  const action =
+    kind === "company" ? restoreCompany : kind === "job" ? restoreJob : restoreAnnouncement;
   const [state, formAction, pending] = useActionState(action.bind(null, id), initialState);
 
   return (

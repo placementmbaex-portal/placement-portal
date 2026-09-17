@@ -25,7 +25,7 @@ export async function toggleAdmin(
     return { error: error.message };
   }
 
-  revalidatePath("/admin/students");
+  revalidatePath("/admin/settings/access");
   return null;
 }
 
@@ -72,7 +72,7 @@ export async function addAllowedStudent(
     return { error: `Could not add to the allowlist: ${error.message}` };
   }
 
-  revalidatePath("/admin/students");
+  revalidatePath("/admin/settings/access");
   return { success: true };
 }
 
@@ -92,7 +92,7 @@ export async function removeAllowedStudent(
     return { error: error.message };
   }
 
-  revalidatePath("/admin/students");
+  revalidatePath("/admin/settings/access");
   return null;
 }
 
@@ -168,6 +168,6 @@ export async function bulkAddAllowedStudents(
     return { error: `Could not add: ${error.message}`, skipped };
   }
 
-  revalidatePath("/admin/students");
+  revalidatePath("/admin/settings/access");
   return { added: rows.length, skipped: skipped.length > 0 ? skipped : undefined };
 }

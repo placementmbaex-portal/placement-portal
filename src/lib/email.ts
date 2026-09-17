@@ -56,7 +56,7 @@ async function logEmail(
 // The one function every email-sending trigger goes through (PRD 5.2's
 // safety mode). app_settings.email_mode decides what actually happens; every
 // outcome -- suppressed, sent or failed -- writes an email_log row, which is
-// the only way /admin/email-log can prove test mode is doing what it should.
+// the only way /admin/settings/email-log can prove test mode is doing what it should.
 //
 // Takes the caller's own Supabase client rather than reaching for the
 // service-role key itself: every current call site is either an

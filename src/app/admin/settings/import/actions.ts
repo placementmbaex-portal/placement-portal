@@ -426,7 +426,7 @@ export async function commitImport(
     updated += 1;
   }
 
-  revalidatePath("/admin/students");
+  revalidatePath("/admin/settings/access");
   revalidatePath("/profile");
 
   return {

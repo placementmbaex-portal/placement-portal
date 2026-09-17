@@ -143,3 +143,25 @@ export async function markAnnouncementWhatsAppShared(id: string) {
 
   revalidatePath("/admin/announcements");
 }
+
+// Soft delete only -- hidden from every student and from this list, but
+// recoverable from /admin/settings/trash. Wiring this up to the new
+// permanently_delete_announcement() RPC and a deletion-log entry is later
+// work; for now trash only ever offers Restore for an announcement.
+export async function deleteAnnouncement(id: string, _formData: FormData) {
+  const { supabase, user } = await requireAdmin();
+
+  const { error } = await supabase
+    .from("announcements")
+    .update({ deleted_at: new Date().toISOString(), deleted_by: user.id })
+    .eq("id", id);
+  if (error) {
+    console.error("deleteAnnouncement: announcements soft-delete failed", error);
+    return;
+  }
+
+  revalidatePath("/admin/announcements");
+  revalidatePath("/admin/settings/trash");
+  revalidatePath("/");
+  revalidatePath("/announcements");
+}

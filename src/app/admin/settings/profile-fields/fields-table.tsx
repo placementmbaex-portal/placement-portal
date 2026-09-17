@@ -194,7 +194,7 @@ function SectionGroup({ section, fields }: { section: string; fields: ProfileFie
                       ↓
                     </button>
                     <Link
-                      href={`/admin/profile-fields/${field.field_key}/edit`}
+                      href={`/admin/settings/profile-fields/${field.field_key}/edit`}
                       className="ml-1.5 text-navy focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
                     >
                       Edit
@@ -276,7 +276,7 @@ function SectionGroup({ section, fields }: { section: string; fields: ProfileFie
                 Move down
               </button>
               <Link
-                href={`/admin/profile-fields/${field.field_key}/edit`}
+                href={`/admin/settings/profile-fields/${field.field_key}/edit`}
                 className="flex h-11 items-center text-[13px] font-medium text-navy"
               >
                 Edit
