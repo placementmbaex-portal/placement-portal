@@ -13,6 +13,14 @@ type SendEmailParams = {
   html: string;
 };
 
+export type EmailOutcome = {
+  to_email: string;
+  subject: string;
+  status: "sent" | "suppressed" | "failed";
+  mode: EmailMode;
+  error?: string;
+};
+
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 async function readEmailSettings(supabase: SupabaseClient<any, any, any>) {
   const { data } = await supabase
@@ -39,9 +47,10 @@ async function logEmail(
     mode: EmailMode;
     error?: string;
   },
-) {
+): Promise<EmailOutcome> {
   const { error } = await supabase.from("email_log").insert(row);
   if (error) console.error("sendEmail: email_log insert failed", error);
+  return { to_email: row.to_email, subject: row.subject, status: row.status, mode: row.mode, error: row.error };
 }
 
 // The one function every email-sending trigger goes through (PRD 5.2's
@@ -59,22 +68,21 @@ export async function sendEmail(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   supabase: SupabaseClient<any, any, any>,
   { studentId, to, subject, html }: SendEmailParams,
-) {
+): Promise<EmailOutcome> {
   const { mode, testRecipients, from } = await readEmailSettings(supabase);
 
   if (mode === "off") {
-    await logEmail(supabase, {
+    return logEmail(supabase, {
       to_email: to,
       intended_for: studentId,
       subject,
       status: "suppressed",
       mode,
     });
-    return;
   }
 
   if (mode === "test" && testRecipients.length === 0) {
-    await logEmail(supabase, {
+    return logEmail(supabase, {
       to_email: to,
       intended_for: studentId,
       subject,
@@ -82,7 +90,6 @@ export async function sendEmail(
       mode,
       error: "email_mode is 'test' but no email_test_recipients are configured.",
     });
-    return;
   }
 
   const sendTo = mode === "test" ? testRecipients : [to];
@@ -102,7 +109,7 @@ export async function sendEmail(
     });
 
     if (error) {
-      await logEmail(supabase, {
+      return logEmail(supabase, {
         to_email: sendTo.join(", "),
         intended_for: studentId,
         subject: sendSubject,
@@ -110,10 +117,9 @@ export async function sendEmail(
         mode,
         error: error.message,
       });
-      return;
     }
 
-    await logEmail(supabase, {
+    return logEmail(supabase, {
       to_email: sendTo.join(", "),
       intended_for: studentId,
       subject: sendSubject,
@@ -121,7 +127,7 @@ export async function sendEmail(
       mode,
     });
   } catch (err) {
-    await logEmail(supabase, {
+    return logEmail(supabase, {
       to_email: sendTo.join(", "),
       intended_for: studentId,
       subject: sendSubject,

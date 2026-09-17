@@ -5,6 +5,25 @@ import { absoluteUrl } from "@/lib/site-url";
 
 export type NotifyEmail = { subject: string; html: string };
 
+export type NotifyEmailOutcome = {
+  studentId: string;
+  studentName: string;
+  studentEmail: string;
+  toEmail: string;
+  status: "sent" | "suppressed" | "failed";
+  error?: string;
+};
+
+export type NotifyResult = {
+  notifiedCount: number;
+  emailOutcomes: NotifyEmailOutcome[];
+  // Students with email_notifications off who were never sent an email
+  // attempt at all -- no email_log row exists for them, so they can't
+  // appear in emailOutcomes; callers that show results to an admin (the
+  // announcement composer) surface this count so the numbers add up.
+  skippedForEmailToggle: number;
+};
+
 type NotifyParams = {
   studentIds: string[];
   type: string;
@@ -21,13 +40,16 @@ type NotifyParams = {
 // notifications row is written unconditionally -- it costs nothing and is
 // always safe -- while email is opt-in per call, gated by each recipient's
 // own students.email_notifications, and routed through sendEmail's
-// off/test/live safety mode.
+// off/test/live safety mode. Returns what happened so a caller that shows
+// results to an admin (the announcement composer) doesn't have to re-query.
 export async function notify(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   supabase: SupabaseClient<any, any, any>,
   { studentIds, type, title, body, link, email, ignoreEmailToggle }: NotifyParams,
-) {
-  if (studentIds.length === 0) return;
+): Promise<NotifyResult> {
+  if (studentIds.length === 0) {
+    return { notifiedCount: 0, emailOutcomes: [], skippedForEmailToggle: 0 };
+  }
 
   const { error: notifyError } = await supabase.from("notifications").insert(
     studentIds.map((user_id) => ({
@@ -42,22 +64,36 @@ export async function notify(
     console.error("notify: notifications insert failed", notifyError);
   }
 
-  if (!email) return;
+  const result: NotifyResult = { notifiedCount: studentIds.length, emailOutcomes: [], skippedForEmailToggle: 0 };
+  if (!email) return result;
 
   const { data: recipients } = await supabase
     .from("students")
-    .select("id, email, email_notifications")
+    .select("id, name, email, email_notifications")
     .in("id", studentIds);
 
   for (const recipient of recipients ?? []) {
-    if (!ignoreEmailToggle && !recipient.email_notifications) continue;
-    await sendEmail(supabase, {
+    if (!ignoreEmailToggle && !recipient.email_notifications) {
+      result.skippedForEmailToggle += 1;
+      continue;
+    }
+    const outcome = await sendEmail(supabase, {
       studentId: recipient.id,
       to: recipient.email,
       subject: email.subject,
       html: email.html,
     });
+    result.emailOutcomes.push({
+      studentId: recipient.id,
+      studentName: recipient.name,
+      studentEmail: recipient.email,
+      toEmail: outcome.to_email,
+      status: outcome.status,
+      error: outcome.error,
+    });
   }
+
+  return result;
 }
 
 // "New job opened" (PRD 5.2): every student meeting the role's own
