@@ -120,21 +120,20 @@ export async function restoreAnnouncement(
 
 export type PermanentDeleteState = { error?: string } | null;
 
-// Real DELETEs. Only ever reachable from /admin/settings/trash, and only once
-// deletion_impact reports zero applications -- re-checked here, not just
-// trusted from the list that rendered the button.
+// Calls the real permanently_delete_company() RPC (schema_r4.sql) rather
+// than a raw .delete() -- it snapshots the company and its jobs into
+// deletion_log, then does the retype-matches-name check itself and raises
+// on a mismatch. Available for any trashed company regardless of how many
+// applications are on record: that's the whole point of a permanent
+// delete, and the retyped name is the only gate. Whatever message the
+// function raises (mismatch, not found) is returned as-is, not replaced
+// with a generic failure.
 export async function permanentlyDeleteCompany(
   companyId: string,
-  expectedName: string,
   _prevState: PermanentDeleteState,
   formData: FormData,
 ): Promise<PermanentDeleteState> {
   const { supabase } = await requireAdmin();
-
-  const typed = ((formData.get("confirm_name") as string) ?? "").trim();
-  if (typed !== expectedName) {
-    return { error: "That doesn't match the company name. Nothing was deleted." };
-  }
 
   const { data: company } = await supabase
     .from("companies")
@@ -146,44 +145,35 @@ export async function permanentlyDeleteCompany(
     return { error: "Only trashed companies can be permanently deleted." };
   }
 
-  const { data: impact, error: impactError } = await supabase.rpc("deletion_impact", {
-    p_kind: "company",
-    p_id: companyId,
+  const confirmName = ((formData.get("confirm_name") as string) ?? "").trim();
+
+  const { error } = await supabase.rpc("permanently_delete_company", {
+    p_company_id: companyId,
+    p_confirm_name: confirmName,
   });
 
-  if (impactError) {
-    console.error("permanentlyDeleteCompany: deletion_impact failed", impactError);
-    return { error: `Could not check what this would affect: ${impactError.message}` };
-  }
-  if ((impact?.applications ?? 0) > 0) {
-    return {
-      error: "This company still has applications on record and can't be permanently deleted.",
-    };
-  }
-
-  const { error } = await supabase.from("companies").delete().eq("id", companyId);
   if (error) {
-    console.error("permanentlyDeleteCompany: companies delete failed", error);
-    return { error: `Could not permanently delete: ${error.message}` };
+    console.error("permanentlyDeleteCompany: rpc failed", error);
+    return { error: error.message };
   }
 
   revalidatePath("/admin/settings/trash");
   revalidatePath("/admin/companies");
+  revalidatePath("/admin/jobs");
+  revalidatePath("/admin");
   redirect("/admin/settings/trash");
 }
 
+// Same pattern as permanentlyDeleteCompany, calling permanently_delete_job()
+// (schema_r4.sql). The JD file lives in Storage, outside the RPC's reach,
+// so it's read before the row is destroyed and removed only once the RPC
+// confirms the delete went through.
 export async function permanentlyDeleteJob(
   jobId: string,
-  expectedTitle: string,
   _prevState: PermanentDeleteState,
   formData: FormData,
 ): Promise<PermanentDeleteState> {
   const { supabase } = await requireAdmin();
-
-  const typed = ((formData.get("confirm_title") as string) ?? "").trim();
-  if (typed !== expectedTitle) {
-    return { error: "That doesn't match the role title. Nothing was deleted." };
-  }
 
   const { data: job } = await supabase
     .from("jobs")
@@ -195,25 +185,16 @@ export async function permanentlyDeleteJob(
     return { error: "Only trashed roles can be permanently deleted." };
   }
 
-  const { data: impact, error: impactError } = await supabase.rpc("deletion_impact", {
-    p_kind: "job",
-    p_id: jobId,
+  const confirmTitle = ((formData.get("confirm_title") as string) ?? "").trim();
+
+  const { error } = await supabase.rpc("permanently_delete_job", {
+    p_job_id: jobId,
+    p_confirm_title: confirmTitle,
   });
 
-  if (impactError) {
-    console.error("permanentlyDeleteJob: deletion_impact failed", impactError);
-    return { error: `Could not check what this would affect: ${impactError.message}` };
-  }
-  if ((impact?.applications ?? 0) > 0) {
-    return {
-      error: "This role still has applications on record and can't be permanently deleted.",
-    };
-  }
-
-  const { error } = await supabase.from("jobs").delete().eq("id", jobId);
   if (error) {
-    console.error("permanentlyDeleteJob: jobs delete failed", error);
-    return { error: `Could not permanently delete: ${error.message}` };
+    console.error("permanentlyDeleteJob: rpc failed", error);
+    return { error: error.message };
   }
 
   if (job.jd_path) {
@@ -222,5 +203,42 @@ export async function permanentlyDeleteJob(
 
   revalidatePath("/admin/settings/trash");
   revalidatePath("/admin/jobs");
+  revalidatePath("/admin");
+  redirect("/admin/settings/trash");
+}
+
+// Unlike the company/job pair above, this calls the real
+// permanently_delete_announcement() RPC rather than a raw .delete() --
+// it snapshots the announcement and its comment count into deletion_log
+// before destroying anything, which is why the RPC needs no retyped
+// confirmation text: the modal itself is the confirmation.
+export async function permanentlyDeleteAnnouncement(
+  announcementId: string,
+  _prevState: PermanentDeleteState,
+  _formData: FormData,
+): Promise<PermanentDeleteState> {
+  const { supabase } = await requireAdmin();
+
+  const { data: announcement } = await supabase
+    .from("announcements")
+    .select("deleted_at")
+    .eq("id", announcementId)
+    .single();
+
+  if (!announcement?.deleted_at) {
+    return { error: "Only trashed announcements can be permanently deleted." };
+  }
+
+  const { error } = await supabase.rpc("permanently_delete_announcement", {
+    p_id: announcementId,
+  });
+
+  if (error) {
+    console.error("permanentlyDeleteAnnouncement: rpc failed", error);
+    return { error: `Could not permanently delete: ${error.message}` };
+  }
+
+  revalidatePath("/admin/settings/trash");
+  revalidatePath("/admin/announcements");
   redirect("/admin/settings/trash");
 }

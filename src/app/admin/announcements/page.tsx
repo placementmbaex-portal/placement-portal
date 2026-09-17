@@ -6,6 +6,7 @@ import { DEFAULT_WHATSAPP_TEMPLATES, fillWhatsAppTemplate } from "@/lib/whatsapp
 import { WhatsAppShareModal } from "@/components/whatsapp-share-modal";
 import { NotSharedMarker } from "@/components/not-shared-marker";
 import { ConfirmSubmitButton } from "@/components/confirm-submit-button";
+import { announcementDeleteConfirmMessage } from "@/lib/announcements/delete-confirm";
 import { RejectDialog } from "./reject-dialog";
 import {
   approveAnnouncement,
@@ -56,6 +57,7 @@ export default async function AdminAnnouncementsPage({
       .select(
         "id, title, body, status, is_pinned, comments_locked, rejection_reason, whatsapp_shared_at, created_at, published_at, author:students(name, roll_no)",
       )
+      .is("deleted_at", null)
       .order("created_at", { ascending: false })
       .overrideTypes<AnnouncementRow[], { merge: false }>(),
     supabase.from("app_settings").select("value").eq("key", "whatsapp_template_announcement").single(),
@@ -65,6 +67,20 @@ export default async function AdminAnnouncementsPage({
     (whatsappSetting?.value as string | undefined) ?? DEFAULT_WHATSAPP_TEMPLATES.announcement;
 
   const all = announcements ?? [];
+
+  // Powers the "This announcement has N comments" line in the delete
+  // confirm -- deletion_impact is the single source of truth for this,
+  // same RPC the Trash and permanent-delete flows use.
+  const commentCountByAnnouncement = new Map<string, number>();
+  await Promise.all(
+    all.map(async (announcement) => {
+      const { data } = await supabase.rpc("deletion_impact", {
+        p_kind: "announcement",
+        p_id: announcement.id,
+      });
+      commentCountByAnnouncement.set(announcement.id, data?.comments ?? 0);
+    }),
+  );
   const pending = all.filter((a) => a.status === "pending");
   const approved = all.filter((a) => a.status === "approved");
   const rejected = all.filter((a) => a.status === "rejected");
@@ -153,22 +169,36 @@ export default async function AdminAnnouncementsPage({
                   </p>
                 </div>
 
-                <form
-                  action={approveAnnouncement.bind(null, announcement.id)}
-                  className="flex w-full flex-col gap-2.5 lg:w-[230px] lg:shrink-0"
-                >
-                  <label className="flex items-center gap-2 text-[13px] text-ink">
-                    <input type="checkbox" name="is_pinned" className="h-3.5 w-3.5" />
-                    Pin to the top
-                  </label>
-                  <button
-                    type="submit"
-                    className="flex h-11 items-center justify-center rounded-md bg-navy font-body text-[13.5px] font-semibold text-white sm:h-10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
+                <div className="flex w-full flex-col gap-2.5 lg:w-[230px] lg:shrink-0">
+                  <form
+                    action={approveAnnouncement.bind(null, announcement.id)}
+                    className="flex flex-col gap-2.5"
                   >
-                    Approve and publish
-                  </button>
+                    <label className="flex items-center gap-2 text-[13px] text-ink">
+                      <input type="checkbox" name="is_pinned" className="h-3.5 w-3.5" />
+                      Pin to the top
+                    </label>
+                    <button
+                      type="submit"
+                      className="flex h-11 items-center justify-center rounded-md bg-navy font-body text-[13.5px] font-semibold text-white sm:h-10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
+                    >
+                      Approve and publish
+                    </button>
+                  </form>
                   <RejectDialog announcementId={announcement.id} />
-                </form>
+                  <form action={deleteAnnouncement.bind(null, announcement.id)}>
+                    <ConfirmSubmitButton
+                      confirmMessage={announcementDeleteConfirmMessage(
+                        announcement.title,
+                        commentCountByAnnouncement.get(announcement.id) ?? 0,
+                      )}
+                      pendingLabel="Deleting…"
+                      className="flex h-11 items-center self-start text-[15px] text-closing underline underline-offset-2 disabled:opacity-60 sm:h-auto"
+                    >
+                      Delete
+                    </ConfirmSubmitButton>
+                  </form>
+                </div>
               </div>
             ))}
           </div>
@@ -257,7 +287,10 @@ export default async function AdminAnnouncementsPage({
                         )}
                         <form className="inline" action={deleteAnnouncement.bind(null, announcement.id)}>
                           <ConfirmSubmitButton
-                            confirmMessage={`Delete "${announcement.title}"? It can be restored from Trash.`}
+                            confirmMessage={announcementDeleteConfirmMessage(
+                              announcement.title,
+                              commentCountByAnnouncement.get(announcement.id) ?? 0,
+                            )}
                             pendingLabel="Deleting…"
                             className="text-closing hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink disabled:opacity-60"
                           >
@@ -334,7 +367,10 @@ export default async function AdminAnnouncementsPage({
                   )}
                   <form action={deleteAnnouncement.bind(null, announcement.id)}>
                     <ConfirmSubmitButton
-                      confirmMessage={`Delete "${announcement.title}"? It can be restored from Trash.`}
+                      confirmMessage={announcementDeleteConfirmMessage(
+                        announcement.title,
+                        commentCountByAnnouncement.get(announcement.id) ?? 0,
+                      )}
                       pendingLabel="Deleting…"
                       className="flex h-11 items-center font-body text-[13px] font-medium text-closing disabled:opacity-60"
                     >

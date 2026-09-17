@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useRef, useState } from "react";
+import { useActionState, useRef } from "react";
 import { deleteJob, toggleJobOpen, type DeleteJobState } from "./actions";
 
 const initialState: DeleteJobState = null;
@@ -23,13 +23,7 @@ export function DeleteJobModal({
   onOpen?: () => void;
 }) {
   const dialogRef = useRef<HTMLDialogElement>(null);
-  const [typedTitle, setTypedTitle] = useState("");
-  const [state, action, pending] = useActionState(
-    deleteJob.bind(null, jobId, jobTitle),
-    initialState,
-  );
-
-  const canDelete = typedTitle === jobTitle;
+  const [state, action, pending] = useActionState(deleteJob.bind(null, jobId), initialState);
 
   return (
     <>
@@ -53,8 +47,8 @@ export function DeleteJobModal({
           </h2>
           <p className="mt-2.5 text-[14px] leading-[1.6] text-ink">
             This job has {plural(impact.applications, "application")} and{" "}
-            {plural(impact.events, "linked event")}. They will be hidden but not destroyed —
-            restore it from Trash any time.
+            {plural(impact.events, "linked event")}. They will be hidden but not destroyed, and
+            can be restored from Trash any time.
           </p>
 
           <div className="mt-4 flex items-start gap-3 rounded-md border border-rule px-4 py-3.5">
@@ -77,22 +71,10 @@ export function DeleteJobModal({
           </div>
 
           <form action={action} className="mt-4.5">
-            <label htmlFor={`confirm_title_${jobId}`} className="mb-1.5 block text-[13px] text-slate">
-              Type <span className="font-mono text-[13px] font-semibold text-ink">{jobTitle}</span> to confirm
-            </label>
-            <input
-              id={`confirm_title_${jobId}`}
-              name="confirm_title"
-              autoComplete="off"
-              value={typedTitle}
-              onChange={(e) => setTypedTitle(e.target.value)}
-              placeholder="Role title"
-              className="h-10 w-full rounded-md border border-rule px-3 text-[14px] text-ink focus:outline-2 focus:outline-offset-2 focus:outline-ink"
-            />
             {state?.error && (
-              <p className="mt-2 text-[13.5px] text-closing">{state.error}</p>
+              <p className="mb-2 text-[13.5px] text-closing">{state.error}</p>
             )}
-            <div className="mt-5 flex items-center justify-end gap-4.5 border-t border-rule py-4.5">
+            <div className="flex items-center justify-end gap-4.5 border-t border-rule py-4.5">
               <button
                 type="button"
                 onClick={() => dialogRef.current?.close()}
@@ -102,7 +84,7 @@ export function DeleteJobModal({
               </button>
               <button
                 type="submit"
-                disabled={!canDelete || pending}
+                disabled={pending}
                 className="flex h-11 items-center text-[14px] font-semibold text-closing underline underline-offset-2 disabled:text-shut disabled:no-underline sm:h-auto focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
               >
                 {pending ? "Deleting…" : "Delete role"}

@@ -73,21 +73,16 @@ export async function updateCompany(
 export type DeleteCompanyState = { error?: string } | null;
 
 // Soft delete only -- see the comment on deleteJob in admin/jobs/actions.ts
-// for why a real DELETE isn't used. Deleting a company also hides its
-// still-live jobs, stamped with the same deleted_at so restoreCompany can
-// find exactly the jobs this cascade hid and no others.
+// for why a real DELETE isn't used, and why this needs only a single
+// confirmation rather than a retyped name. Deleting a company also hides
+// its still-live jobs, stamped with the same deleted_at so restoreCompany
+// can find exactly the jobs this cascade hid and no others.
 export async function deleteCompany(
   companyId: string,
-  expectedName: string,
   _prevState: DeleteCompanyState,
-  formData: FormData,
+  _formData: FormData,
 ): Promise<DeleteCompanyState> {
   const { supabase, user } = await requireAdmin();
-
-  const typed = ((formData.get("confirm_name") as string) ?? "").trim();
-  if (typed !== expectedName) {
-    return { error: "That doesn't match the company name. Nothing was deleted." };
-  }
 
   const deletedAt = new Date().toISOString();
 

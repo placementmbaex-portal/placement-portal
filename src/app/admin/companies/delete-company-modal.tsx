@@ -22,9 +22,8 @@ export function DeleteCompanyModal({
 }) {
   const dialogRef = useRef<HTMLDialogElement>(null);
   const [open, setOpen] = useState(false);
-  const [typedName, setTypedName] = useState("");
   const [state, action, pending] = useActionState(
-    deleteCompany.bind(null, companyId, companyName),
+    deleteCompany.bind(null, companyId),
     initialState,
   );
 
@@ -39,8 +38,6 @@ export function DeleteCompanyModal({
     if (open) dialog.showModal();
     else dialog.close();
   }, [open]);
-
-  const canDelete = typedName === companyName;
 
   return (
     <>
@@ -59,8 +56,8 @@ export function DeleteCompanyModal({
           <p className="mt-2.5 text-[14px] leading-[1.6] text-ink">
             This company has {plural(impact.jobs, "job")},{" "}
             {plural(impact.applications, "application")} and{" "}
-            {plural(impact.events, "linked event")}. They will be hidden but not destroyed —
-            restore it from Trash any time.
+            {plural(impact.events, "linked event")}. They will be hidden but not destroyed, and
+            can be restored from Trash any time.
           </p>
           <p className="mt-2.5 rounded-md border border-rule bg-paper px-3.5 py-2.5 text-[13.5px] leading-[1.5] text-ink">
             Deleting this company also hides its {plural(impact.jobs, "job")}. Restoring the
@@ -68,22 +65,10 @@ export function DeleteCompanyModal({
           </p>
 
           <form action={action} className="mt-4.5">
-            <label htmlFor={`confirm_name_${companyId}`} className="mb-1.5 block text-[13px] text-slate">
-              Type <span className="font-mono text-[13px] font-semibold text-ink">{companyName}</span> to confirm
-            </label>
-            <input
-              id={`confirm_name_${companyId}`}
-              name="confirm_name"
-              autoComplete="off"
-              value={typedName}
-              onChange={(e) => setTypedName(e.target.value)}
-              placeholder="Company name"
-              className="h-10 w-full rounded-md border border-rule px-3 text-[14px] text-ink focus:outline-2 focus:outline-offset-2 focus:outline-ink"
-            />
             {state?.error && (
-              <p className="mt-2 text-[13.5px] text-closing">{state.error}</p>
+              <p className="mb-2 text-[13.5px] text-closing">{state.error}</p>
             )}
-            <div className="mt-5 flex items-center justify-end gap-4.5 border-t border-rule py-4.5">
+            <div className="flex items-center justify-end gap-4.5 border-t border-rule py-4.5">
               <button
                 type="button"
                 onClick={() => setOpen(false)}
@@ -93,7 +78,7 @@ export function DeleteCompanyModal({
               </button>
               <button
                 type="submit"
-                disabled={!canDelete || pending}
+                disabled={pending}
                 className="flex h-11 items-center text-[14px] font-semibold text-closing underline underline-offset-2 disabled:text-shut disabled:no-underline sm:h-auto focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
               >
                 {pending ? "Deleting…" : "Delete company"}

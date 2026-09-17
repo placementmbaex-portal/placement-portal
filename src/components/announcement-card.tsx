@@ -12,6 +12,8 @@ import {
   viewAnnouncementAttachment,
   type CommentFormState,
 } from "@/lib/announcements/actions";
+import { announcementDeleteConfirmMessage } from "@/lib/announcements/delete-confirm";
+import { deleteAnnouncement } from "@/app/admin/announcements/actions";
 
 export type CommentData = {
   id: string;
@@ -135,10 +137,24 @@ export function AnnouncementCard({
         </button>
       </div>
 
-      <p className="mt-2 text-[12px] text-shut">
+      <div className="mt-2 text-[12px] text-shut">
         {announcement.authorName} ·{" "}
         {formatDateTimeIST(announcement.publishedAt)} IST
-      </p>
+        {isAdmin && (
+          <>
+            {" · "}
+            <form className="inline" action={deleteAnnouncement.bind(null, announcement.id)}>
+              <ConfirmSubmitButton
+                confirmMessage={announcementDeleteConfirmMessage(announcement.title, comments.length)}
+                pendingLabel="Deleting…"
+                className="text-closing underline underline-offset-2 disabled:opacity-60"
+              >
+                Delete
+              </ConfirmSubmitButton>
+            </form>
+          </>
+        )}
+      </div>
 
       {expanded && (
         <div className="mt-3 space-y-4 border-t border-rule pt-3">

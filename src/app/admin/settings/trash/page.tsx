@@ -32,7 +32,7 @@ type TrashRow = {
   name: string;
   deletedAt: string;
   deletedBy: string;
-  applications: number;
+  impact: { applications?: number; jobs?: number; comments?: number };
 };
 
 type DeletionLogRow = {
@@ -40,6 +40,7 @@ type DeletionLogRow = {
   entity_type: string;
   entity_label: string | null;
   applications_destroyed: number;
+  snapshot: { comment_count?: number } | null;
   deleted_at: string;
   deleter: { name: string } | null;
 };
@@ -82,7 +83,7 @@ async function TrashView() {
         name: company.name,
         deletedAt: company.deleted_at,
         deletedBy: company.deleter?.name ?? "—",
-        applications: data?.applications ?? 0,
+        impact: { applications: data?.applications ?? 0, jobs: data?.jobs ?? 0 },
       });
     })),
     ...((jobs ?? []).map(async (job) => {
@@ -96,17 +97,21 @@ async function TrashView() {
         name: job.company?.name ? `${job.title} · ${job.company.name}` : job.title,
         deletedAt: job.deleted_at,
         deletedBy: job.deleter?.name ?? "—",
-        applications: data?.applications ?? 0,
+        impact: { applications: data?.applications ?? 0 },
       });
     })),
     ...((announcements ?? []).map(async (announcement) => {
+      const { data } = await supabase.rpc("deletion_impact", {
+        p_kind: "announcement",
+        p_id: announcement.id,
+      });
       rows.push({
         kind: "announcement",
         id: announcement.id,
         name: announcement.title,
         deletedAt: announcement.deleted_at,
         deletedBy: announcement.deleter?.name ?? "—",
-        applications: 0,
+        impact: { comments: data?.comments ?? 0 },
       });
     })),
   ]);
@@ -148,20 +153,12 @@ async function TrashView() {
                 <td className="px-4 text-right whitespace-nowrap">
                   <div className="flex items-center justify-end gap-3.5">
                     <RestoreButton kind={row.kind} id={row.id} />
-                    {row.kind === "announcement" ? (
-                      <span className="text-shut" title="Permanent delete for announcements is coming soon">
-                        Permanently delete
-                      </span>
-                    ) : row.applications === 0 ? (
-                      <PermanentDeleteModal kind={row.kind} id={row.id} name={row.name} />
-                    ) : (
-                      <span
-                        className="text-shut"
-                        title={`Has ${row.applications} application${row.applications === 1 ? "" : "s"} on record`}
-                      >
-                        Permanently delete
-                      </span>
-                    )}
+                    <PermanentDeleteModal
+                      kind={row.kind}
+                      id={row.id}
+                      name={row.name}
+                      impact={row.impact}
+                    />
                   </div>
                 </td>
               </tr>
@@ -183,18 +180,7 @@ async function TrashView() {
             </div>
             <div className="mt-3 flex items-center justify-between">
               <RestoreButton kind={row.kind} id={row.id} />
-              {row.kind === "announcement" ? (
-                <span className="text-[13px] text-shut">Permanently delete</span>
-              ) : row.applications === 0 ? (
-                <PermanentDeleteModal kind={row.kind} id={row.id} name={row.name} />
-              ) : (
-                <span
-                  className="text-[13px] text-shut"
-                  title={`Has ${row.applications} application${row.applications === 1 ? "" : "s"} on record`}
-                >
-                  Permanently delete
-                </span>
-              )}
+              <PermanentDeleteModal kind={row.kind} id={row.id} name={row.name} impact={row.impact} />
             </div>
           </div>
         ))}
@@ -203,16 +189,26 @@ async function TrashView() {
   );
 }
 
+// permanently_delete_announcement stores 0 in applications_destroyed
+// (announcements have none) and puts the real count in the jsonb
+// snapshot instead -- this reads whichever column is meaningful for
+// the row's kind rather than showing a flat, misleading "0".
+function destroyedWithLabel(row: DeletionLogRow) {
+  if (row.entity_type === "announcement") {
+    const commentCount = row.snapshot?.comment_count ?? 0;
+    return `${commentCount} comment${commentCount === 1 ? "" : "s"}`;
+  }
+  return `${row.applications_destroyed} application${row.applications_destroyed === 1 ? "" : "s"}`;
+}
+
 async function DeletionLogView() {
   const { supabase } = await requireAdmin();
 
-  // Nothing writes to this table yet -- permanently_delete_job/company/
-  // announcement() exist in schema_r4.sql, but wiring the trash actions
-  // above to call them (so they actually snapshot + log) is later work.
-  // Until then this view is correctly, honestly empty.
   const { data: log } = await supabase
     .from("deletion_log")
-    .select("id, entity_type, entity_label, applications_destroyed, deleted_at, deleter:students!deleted_by(name)")
+    .select(
+      "id, entity_type, entity_label, applications_destroyed, snapshot, deleted_at, deleter:students!deleted_by(name)",
+    )
     .order("deleted_at", { ascending: false })
     .limit(200)
     .overrideTypes<DeletionLogRow[], { merge: false }>();
@@ -235,7 +231,7 @@ async function DeletionLogView() {
           <tr>
             <th className="h-10 px-4 font-medium">Name</th>
             <th className="h-10 px-4 font-medium">Kind</th>
-            <th className="h-10 px-4 font-medium">Applications destroyed</th>
+            <th className="h-10 px-4 font-medium">Destroyed with it</th>
             <th className="h-10 px-4 font-medium">When</th>
             <th className="h-10 px-4 font-medium">By</th>
           </tr>
@@ -245,7 +241,7 @@ async function DeletionLogView() {
             <tr key={row.id} className="h-12 border-b border-rule last:border-0">
               <td className="px-4 font-medium text-ink">{row.entity_label ?? "—"}</td>
               <td className="px-4 text-slate capitalize">{row.entity_type}</td>
-              <td className="px-4 tabular-nums text-slate">{row.applications_destroyed}</td>
+              <td className="px-4 tabular-nums text-slate">{destroyedWithLabel(row)}</td>
               <td className="px-4 whitespace-nowrap tabular-nums text-slate">
                 {formatDateTimeIST(row.deleted_at)}
               </td>

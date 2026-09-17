@@ -325,21 +325,16 @@ export type DeleteJobState = { error?: string } | null;
 // Soft delete only -- a real DELETE cascades to applications and events
 // (schema.sql's FKs) and would destroy application history. Setting
 // deleted_at/deleted_by hides the role from every list and from RLS
-// (jobs_read) without touching a single other row; /admin/settings/trash is where
-// it can be restored or, once it has zero applications, hard-deleted for
-// real.
+// (jobs_read) without touching a single other row. It's recoverable from
+// /admin/settings/trash, so this is a single confirmation with no retyping
+// -- retyping the title is reserved for the separate, irreversible
+// permanently_delete_job() call reachable only from there.
 export async function deleteJob(
   jobId: string,
-  expectedTitle: string,
   _prevState: DeleteJobState,
-  formData: FormData,
+  _formData: FormData,
 ): Promise<DeleteJobState> {
   const { supabase, user } = await requireAdmin();
-
-  const typed = ((formData.get("confirm_title") as string) ?? "").trim();
-  if (typed !== expectedTitle) {
-    return { error: "That doesn't match the role title. Nothing was deleted." };
-  }
 
   const { error } = await supabase
     .from("jobs")

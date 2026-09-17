@@ -25,11 +25,9 @@ export default async function AdminOverviewPage() {
     { count: registeredCount },
     { count: signedInCount },
     { data: cvOwners },
-    { data: applicantIds },
+    { data: applications },
     { count: companyCount },
     { count: roleCount },
-    { count: applicationCount },
-    { count: offerCount },
     { count: pendingAnnouncementCount },
     { count: closingSoonCount },
     { data: openJobs },
@@ -39,17 +37,22 @@ export default async function AdminOverviewPage() {
     supabase.from("allowed_students").select("id", { count: "exact", head: true }),
     supabase.from("students").select("id", { count: "exact", head: true }),
     supabase.from("cvs").select("student_id"),
-    supabase.from("applications").select("student_id"),
+    // Fetched as rows rather than a head-only count, and joined to the
+    // job, so a deleted job's applications can be excluded from every
+    // figure below in JS -- is_admin() bypasses jobs_read's own deleted_at
+    // filter, so nothing does this for an admin's own query automatically.
+    supabase
+      .from("applications")
+      .select("student_id, status, job:jobs(deleted_at)")
+      .overrideTypes<
+        { student_id: string; status: string; job: { deleted_at: string | null } | null }[],
+        { merge: false }
+      >(),
     supabase
       .from("companies")
       .select("id", { count: "exact", head: true })
       .is("deleted_at", null),
     supabase.from("jobs").select("id", { count: "exact", head: true }).is("deleted_at", null),
-    supabase.from("applications").select("id", { count: "exact", head: true }),
-    supabase
-      .from("applications")
-      .select("id", { count: "exact", head: true })
-      .eq("status", "offer"),
     supabase
       .from("announcements")
       .select("id", { count: "exact", head: true })
@@ -90,7 +93,11 @@ export default async function AdminOverviewPage() {
   ]);
 
   const cvUploaderCount = new Set((cvOwners ?? []).map((r) => r.student_id)).size;
-  const applicantCount = new Set((applicantIds ?? []).map((r) => r.student_id)).size;
+
+  const liveApplications = (applications ?? []).filter((a) => !a.job?.deleted_at);
+  const applicantCount = new Set(liveApplications.map((a) => a.student_id)).size;
+  const applicationCount = liveApplications.length;
+  const offerCount = liveApplications.filter((a) => a.status === "offer").length;
 
   const jobs = openJobs ?? [];
   const shortlistPendingCount = jobs.filter((job) => {
